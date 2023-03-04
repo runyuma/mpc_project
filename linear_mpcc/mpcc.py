@@ -34,7 +34,7 @@ def linear_mpc_control(robot_state,theta0,contour,param):
 
     phi0,v0,delta0 = robot_state.yaw,robot_state.v,robot_state.delta
     A,B,C = model.calc_linear_discrete_model(phi0,v0,delta0,param)
-    Ec,Jx,Jtheta = cal_error_linear(robot_state,theta0,contour,param)
+    Ec,Jx,Jtheta = cal_error_linear(robot_state,theta0,contour)
 
     x0 = np.array([robot_state.x,robot_state.y,robot_state.yaw,robot_state.v,robot_state.delta])
     constraints += [x[:, 0] == x0]
@@ -64,6 +64,37 @@ def linear_mpc_control(robot_state,theta0,contour,param):
 
     return x, u
 
-def cal_error_linear(robot_state,contour,param):
-    pass
+def cal_error_linear(robot_state,theta,contour):
+    # E = Ec + Jx*X + Jtheta*theta = E0 + Jx*(X-X0) + Jtheta*(theta-theta0)
+    x = robot_state.x
+    y = robot_state.y
+    xd,yd  = contour.loc(theta)
+    a1,b1,c1,d1 = contour.xparam
+    a2,b2,c2,d2 = contour.yparam
+    dx = 3*a1*theta**2 + 2*b1*theta + c1
+    dy = 3*a2*theta**2 + 2*b2*theta + c2
+    phi_theta = np.arctan2(dy,dx)
+    #numerical derivative
+    interv = 0.1
+    dxp = 3*a1*(theta+interv)**2 + 2*b1*(theta+interv) + c1
+    dyp = 3*a2*(theta+interv)**2 + 2*b2*(theta+interv) + c2
+    dxm = 3*a1*(theta-interv)**2 + 2*b1*(theta-interv) + c1
+    dym = 3*a2*(theta-interv)**2 + 2*b2*(theta-interv) + c2
+    phi_theta_p = np.arctan2(dyp,dxp)
+    phi_theta_m = np.arctan2(dym,dxm)
+    dphi_theta= (phi_theta_p-phi_theta_m)/(2*interv)
+
+    Jx = np.array([[np.sin(phi_theta), -np.cos(phi_theta), 0, 0, 0],
+                   [-np.cos(phi_theta), -np.sin(phi_theta), 0, 0, 0]])
+    Jtheta1 = np.cos(phi_theta)*dphi_theta*(x-xd)+np.sin(phi_theta)*dphi_theta*(y-yd)+np.sin(phi_theta)*(-dx)-np.cos(phi_theta)*(-dy)
+    Jtheta2 = np.sin(phi_theta)*dphi_theta*(x-xd)-np.cos(phi_theta)*dphi_theta*(y-yd)-np.cos(phi_theta)*(-dx)-np.sin(phi_theta)*(-dy)
+    Jtheta = np.array([[Jtheta1,Jtheta2]])
+    Ec = np.array([[np.sin(phi_theta), - np.cos(phi_theta)],
+                   [- np.cos(phi_theta), - np.sin(phi_theta)]])\
+         @np.array([[x-xd],[y-yd]])
+    X = np.array([[x],[y],[robot_state.yaw],[robot_state.v],[robot_state.delta]])
+    Ec -= Jx@X
+    Ec -= Jtheta@theta
+
+    return Ec,Jx,Jtheta
 
