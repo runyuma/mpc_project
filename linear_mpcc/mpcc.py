@@ -47,10 +47,19 @@ def linear_mpc_control(robot_state,theta0,contour,param):
         constraints += [x[:, k + 1] == A@x[:, k]+B@u[:, k]+C]
         constraints += [theta[:, k + 1] == theta[:, k]+param.dt*v[:,k]]
         #input constraints
+        constraints += [v[:, k]>=0]
+        constraints += [u[1, k] <= param.delta_dot_max]
+        constraints += [u[1, k] >= -param.delta_dot_max]
+        constraints += [u[0, k] <= param.a_max]
+        constraints += [u[0, k] >= -param.a_max]
         #state constraints
+        constraints += [x[3, k] <= param.v_max]
+        constraints += [x[3, k] >= 0]
+        # constraints += [x[4, k] <= param.delta_max]
+        # constraints += [x[4, k] >= -param.delta_max]
         #cost function
         cost += cvxpy.quad_form(e[:,k],Q)
-        cost += q.T@theta[:,k]
+        cost += -q.T@theta[:,k]
         cost += cvxpy.quad_form(u[:,k],R)
         cost += cvxpy.quad_form(v[:,k],Rv)
     #todo:terminal cost
@@ -60,6 +69,7 @@ def linear_mpc_control(robot_state,theta0,contour,param):
             prob.status == cvxpy.OPTIMAL_INACCURATE:
         x = x.value
         u = u.value
+        # print(u)
     else:
         print("Cannot solve linear mpc!")
 

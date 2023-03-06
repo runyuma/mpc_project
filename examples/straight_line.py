@@ -11,7 +11,7 @@ from linear_mpcc.mpcc_solver import mpcc_solver
 from linear_mpcc.contour import Contour
 from linear_mpcc.bicycle_model import ROBOT_STATE
 from linear_mpcc.config import Param
-from linear_mpcc.plot import visualization
+from linear_mpcc.plot import visualization,mpc_visualization
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -19,12 +19,16 @@ import matplotlib.pyplot as plt
 def set_params():
     param_dict = {"dt": 0.1,
                 "N": 20,
-                "Q": np.diag([2.0, 1.0]),
+                "Q": np.diag([2.0, 20.0]),
                 "P": np.diag([2.0, 1.0]),
-                "q": np.array([1.0]),
+                "q": np.array([5.0]),
                 "Ru": np.diag([0.1, 0.1]),
                 "Rv": np.diag([0.1]),
-                "C2": 2.5
+                "C2": 2.5,
+                "max_vel":2.0,
+                "max_acc": 1.0,
+                "max_deltadot": 0.5,
+                "max_delta": 0.5,
                 }
 
     param = Param(param_dict)
@@ -80,7 +84,8 @@ def main():
     STEP = 0
     while True:
         # mpcc opt
-        ctrl = mpcc_solver(robot_state, contour, param)
+        ctrl,pred_states = mpcc_solver(robot_state, contour, param)
+        print("control",ctrl)
         # append ctrl history
         robot_acc_real.append(ctrl[0])
         robot_ddelta_real.append(ctrl[1])
@@ -94,6 +99,8 @@ def main():
         robot_state.state_update(acc=ctrl[0], deltadot=ctrl[1], param=param)
 
         visualization(robot_state, contour)
+        mpc_visualization(pred_states)
+        plt.pause(0.01)
 
         terminal_err = np.linalg.norm([robot_state.x-goalx,robot_state.y-goaly])
 

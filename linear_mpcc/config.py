@@ -11,6 +11,11 @@ class Param:
         self.q = param_dict["q"]      # as defined in cost function
         self.R = param_dict["Ru"]     # as defined in cost function (Ru)
         self.Rv = param_dict["Rv"]    # as defined in cost function (Rv)
+        self.delta_max = param_dict["max_delta"]    # maximum steering angle (rad)
+        self.delta_dot_max = param_dict["max_deltadot"]    # maximum steering angle change (rad/s)
+        self.v_max = param_dict["max_vel"]    # maximum velocity (m/s)
+        self.a_max = param_dict["max_acc"]    # maximum acceleration (m/s^2)
+
         # vehicle parameters
         self.C2 = param_dict["C2"]    # inter-axle distance (NOT reciprocal)
         
