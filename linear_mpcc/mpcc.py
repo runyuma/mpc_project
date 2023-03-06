@@ -40,10 +40,10 @@ def linear_mpc_control(robot_state,theta0,contour,param):
     x0 = np.array([robot_state.x,robot_state.y,robot_state.yaw,robot_state.v,robot_state.delta])
     constraints += [x[:, 0] == x0]
     constraints += [theta[:, 0] == theta0]
-
+    
     for k in range(T):
         #dynamic model contraints
-        constraints += [e[:,k] == Ec + Jx@x[:,k] + Jtheta@theta[:,k]]
+        constraints += [e[:,k] == Ec.reshape(2,) + (Jx@x[:,k]) + (Jtheta@theta[:,k])]
         constraints += [x[:, k + 1] == A@x[:, k]+B@u[:, k]+C]
         constraints += [theta[:, k + 1] == theta[:, k]+param.dt*v[:,k]]
         #input constraints
@@ -90,19 +90,12 @@ def cal_error_linear(robot_state,theta,contour):
     Jtheta1 = np.cos(phi_theta)*dphi_theta*(x-xd)+np.sin(phi_theta)*dphi_theta*(y-yd)+np.sin(phi_theta)*(-dx)-np.cos(phi_theta)*(-dy)
     Jtheta2 = np.sin(phi_theta)*dphi_theta*(x-xd)-np.cos(phi_theta)*dphi_theta*(y-yd)-np.cos(phi_theta)*(-dx)-np.sin(phi_theta)*(-dy)
     Jtheta = np.array([[Jtheta1,Jtheta2]]).T
-
-    print(Jtheta1)
-    print(Jtheta2)
-    print(Jtheta.shape)
-    print()
-    
     Ec = np.array([[np.sin(phi_theta), - np.cos(phi_theta)],
                    [- np.cos(phi_theta), - np.sin(phi_theta)]])\
          @np.array([[x-xd],[y-yd]])
-    print(Ec.shape)
     X = np.array([[x],[y],[robot_state.yaw],[robot_state.v],[robot_state.delta]])
     Ec -= Jx@X
-    Ec -= Jtheta@theta
+    Ec -= (Jtheta@np.array([theta])).reshape((2,1))
 
     return Ec,Jx,Jtheta
 

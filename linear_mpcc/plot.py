@@ -4,6 +4,7 @@ from linear_mpcc.bicycle_model import ROBOT_STATE
 from linear_mpcc.contour import Contour
 
 def visualization(robot_state, contour):
+    plt.cla()
     x_min = np.min(np.array(contour.path)[:,0])
     x_max = np.max(np.array(contour.path)[:,0])
     y_min = np.min(np.array(contour.path)[:,1])
@@ -28,7 +29,7 @@ def visualization(robot_state, contour):
     plt.plot(xs,ys,c='yellow',linewidth=2)
     plt.scatter(ref[0],ref[1],c='r')
     draw_car(robot_state.x,robot_state.y,robot_state.yaw,robot_state.delta)
-    plt.show()
+    plt.pause(0.01)
 
 def draw_car(x,y,yaw,steer,color='black'):
     # draw car

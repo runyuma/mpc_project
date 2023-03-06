@@ -16,4 +16,4 @@ def mpcc_solver(robot_state, contour, param):
     contour.regression(theta, horizon)
     x,u = linear_mpc_control(robot_state,theta,contour,param)
     
-    return u[:0]
+    return u[:,0].reshape(2,)
