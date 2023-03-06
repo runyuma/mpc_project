@@ -19,8 +19,8 @@ import matplotlib.pyplot as plt
 def set_params():
     param_dict = {"dt": 0.5,
                 "N": 5,
-                "Q": np.diag([1.0, 20.0]),
-                "P": np.diag([1.0, 20.0]),
+                "Q": np.diag([2.0, 20.0]),
+                "P": np.diag([2.0, 20.0]),
                 "q": np.array([10.0]),
                 "Ru": np.diag([0.1, 1]),
                 "Rv": np.diag([0.1]),
@@ -73,7 +73,7 @@ def main():
 
     contour = Contour(path)
 
-    robot_state = ROBOT_STATE(.5,0,np.pi/2,0.1,0)
+    robot_state = ROBOT_STATE(.5,0,np.pi/2+0.2,0.1,0)
     param = set_params()
 
     robot_x_real,robot_y_real,robot_yaw_real = [],[],[] # real robot state history - x,y,yaw

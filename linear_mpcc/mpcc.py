@@ -60,6 +60,7 @@ def linear_mpc_control(robot_state,theta0,contour,param):
         constraints += [x[4, k] >= -param.delta_max]
         constraints +=[theta[:,k]<=0]
         #cost function
+        cost += cvxpy.quad_form(x[2:3,k+1]-x[2:3,k],np.diag([10]))
         cost += cvxpy.quad_form(e[:,k],Q)
         cost += -q.T@theta[:,k]
         cost += cvxpy.quad_form(u[:,k],R)
