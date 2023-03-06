@@ -26,7 +26,7 @@ def set_params():
                 "Rv": np.diag([0.1]),
                 "C2": 2.5,
                 "max_vel":2.0,
-                "max_acc": 1.0,
+                "max_acc": 2.0,
                 "max_deltadot": 0.3,
                 "max_delta": 0.3,
                 }
@@ -68,12 +68,15 @@ def visualize(robot_state_real,robot_ctrl_real,param):
 
 def main():
 
-    path = [[0,i*0.1] for i in range(400)] # x constantly 0, y from 0 to 10
+    # path = [[0,i*0.1] for i in range(400)] # x constantly 0, y from 0 to 10
+    # robot_state = ROBOT_STATE(.5, 0, np.pi / 2 + 0.2, 0.1, 0)
+    path = [[20*np.cos(1.57-1.57*i/314),20*np.sin(1.57-1.57*i/314)] for i in range(314)]
+    robot_state = ROBOT_STATE(0.2, 20, 0, 0, 0)
     goalx,goaly = path[-1][0],path[-1][1]
 
     contour = Contour(path)
 
-    robot_state = ROBOT_STATE(.5,0,np.pi/2+0.2,0.1,0)
+
     param = set_params()
 
     robot_x_real,robot_y_real,robot_yaw_real = [],[],[] # real robot state history - x,y,yaw
@@ -104,7 +107,7 @@ def main():
 
         terminal_err = np.linalg.norm([robot_state.x-goalx,robot_state.y-goaly])
 
-        if terminal_err <= .5:
+        if terminal_err <= 0.5:
             print("Goal reached.")
             break
         
