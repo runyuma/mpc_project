@@ -14,6 +14,7 @@ def visualization(robot_state, contour):
     plt.ylim(y_min-bound,y_max+bound)
     ax = plt.gca()
     ax.set_aspect(1)
+    
     x = np.array(contour.path)[:,0]
     y = np.array(contour.path)[:,1]
     theta = contour.find_closest_point(robot_state)

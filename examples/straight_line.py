@@ -68,8 +68,11 @@ def visualize(robot_state_real,robot_ctrl_real,param):
 
 def main():
 
+    # linear path
     # path = [[0,i*0.1] for i in range(400)] # x constantly 0, y from 0 to 10
     # robot_state = ROBOT_STATE(.5, 0, np.pi / 2 + 0.2, 0.1, 0)
+
+    # quater circle path
     path = [[20*np.cos(1.57-1.57*i/314),20*np.sin(1.57-1.57*i/314)] for i in range(314)]
     robot_state = ROBOT_STATE(0.2, 20, 0, 0, 0)
     goalx,goaly = path[-1][0],path[-1][1]
@@ -83,15 +86,24 @@ def main():
     robot_acc_real,robot_ddelta_real = [],[] # real robot control history - acc, ddelta
 
     ctrl = np.zeros((1,2)) # control array as in state space model
+    prev_optim_ctrl = np.zeros((2,param.N)) # store the previous MPC's optimal control solution for next problem's state transitions
+    prev_optim_theta = -contour.path_length * np.ones((1,param.N))   # at the start, assume it is the original value
 
     STEP = 0
     while True:
         # mpcc opt
-        ctrl,pred_states = mpcc_solver(robot_state, contour, param)
+        ctrl,pred_states,theta = mpcc_solver(robot_state=robot_state, contour=contour, param=param,
+            prev_optim_ctrl=prev_optim_ctrl, prev_optim_v=prev_optim_theta, use_prev_optim_ctrl=True)
+        # print(ctrl.shape)
+        prev_optim_ctrl = ctrl
+        prev_optim_theta = theta
+        print(theta)
+        one_step_ctrl = (ctrl[:,0]).reshape(2,)
+
         # print("control",ctrl)
         # append ctrl history
-        robot_acc_real.append(ctrl[0])
-        robot_ddelta_real.append(ctrl[1])
+        robot_acc_real.append(one_step_ctrl[0])
+        robot_ddelta_real.append(one_step_ctrl[1])
         
         # append state history
         robot_x_real.append(robot_state.x)
@@ -99,7 +111,7 @@ def main():
         robot_yaw_real.append(robot_state.yaw)
 
         # state update (transition with nonlinear simulation)
-        robot_state.state_update(acc=ctrl[0], deltadot=ctrl[1], param=param)
+        robot_state.state_update(acc=one_step_ctrl[0], deltadot=one_step_ctrl[1], param=param)
 
         visualization(robot_state, contour)
         mpc_visualization(pred_states)

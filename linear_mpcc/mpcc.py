@@ -2,9 +2,9 @@
 import numpy as np
 import cvxpy
 import linear_mpcc.bicycle_model as model
+import copy
 
-
-def linear_mpc_control(robot_state,theta0,contour,param):
+def linear_mpc_control(robot_state,theta0,contour,param,prev_optim_ctrl,prev_optim_v,use_prev_optim_ctrl=True):
     """
     linear model predictive control
     :param robot_state: robot state
@@ -33,12 +33,17 @@ def linear_mpc_control(robot_state,theta0,contour,param):
     cost = 0.
     constraints = []
 
+    approx_optim_ctrl = prev_optim_ctrl              # length is N-1
+    approx_optim_v = prev_optim_v.reshape(-1)         # length is N-1
+
+    robot_state_cp = copy.deepcopy(robot_state)
+
     phi0,v0,delta0 = robot_state.yaw, robot_state.v, robot_state.delta
     A,B,C = model.calc_linear_discrete_model(v0,phi0,delta0,param)
     Ec,Jx,Jtheta = cal_error_linear(robot_state,theta0,contour)
 
     x0 = np.array([robot_state.x,robot_state.y,robot_state.yaw,robot_state.v,robot_state.delta])
-    print("x0",x0)
+    # print("x0",x0)
     constraints += [x[:, 0] == x0]
     constraints += [theta[:, 0] == theta0]
     
@@ -58,13 +63,19 @@ def linear_mpc_control(robot_state,theta0,contour,param):
         constraints += [x[3, k] >= 0]
         constraints += [x[4, k] <= param.delta_max]
         constraints += [x[4, k] >= -param.delta_max]
-        constraints +=[theta[:,k]<=0]
+        constraints += [theta[:,k]<=0]
         #cost function
         cost += cvxpy.quad_form(x[2:3,k+1]-x[2:3,k],np.diag([10]))
         cost += cvxpy.quad_form(e[:,k],Q)
         cost += -q.T@theta[:,k]
         cost += cvxpy.quad_form(u[:,k],R)
         cost += cvxpy.quad_form(v[:,k],Rv)
+
+        if use_prev_optim_ctrl and k<T-1: # use previous optimal control solution, need iteration every step
+            robot_state_cp.state_update(approx_optim_ctrl[0,k], approx_optim_ctrl[1,k], param)    # update robot state
+            theta0 = approx_optim_v[k]                                                         # update theta state
+            Ec,Jx,Jtheta = cal_error_linear(robot_state_cp,theta0,contour)
+
     #terminal cost
     cost += cvxpy.quad_form(e[:,T],P)
     cost += -q.T@theta[:,T]
@@ -83,6 +94,7 @@ def linear_mpc_control(robot_state,theta0,contour,param):
         u = u.value
         v = v.value
         e = e.value
+        theta = theta.value
         # print("e",e)
         # print("v",v)
         # print("theta",theta.value)
@@ -91,11 +103,11 @@ def linear_mpc_control(robot_state,theta0,contour,param):
     else:
         print("Cannot solve linear mpc!")
 
-    return x, u
+    return x, u, theta
 
 def cal_error_linear(robot_state,theta,contour):
     # E = Ec + Jx*X + Jtheta*theta = E0 + Jx*(X-X0) + Jtheta*(theta-theta0)
-    print("theta: ",theta)
+    # print("theta: ",theta)
     x = robot_state.x
     y = robot_state.y
     xd,yd  = contour.loc(theta)
