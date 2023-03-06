@@ -74,7 +74,7 @@ def cal_error_linear(robot_state,theta,contour):
     dx = 3*a1*theta**2 + 2*b1*theta + c1
     dy = 3*a2*theta**2 + 2*b2*theta + c2
     phi_theta = np.arctan2(dy,dx)
-    #numerical derivative
+    # numerical derivative
     interv = 0.1
     dxp = 3*a1*(theta+interv)**2 + 2*b1*(theta+interv) + c1
     dyp = 3*a2*(theta+interv)**2 + 2*b2*(theta+interv) + c2
@@ -88,7 +88,7 @@ def cal_error_linear(robot_state,theta,contour):
                    [-np.cos(phi_theta), -np.sin(phi_theta), 0, 0, 0]])
     Jtheta1 = np.cos(phi_theta)*dphi_theta*(x-xd)+np.sin(phi_theta)*dphi_theta*(y-yd)+np.sin(phi_theta)*(-dx)-np.cos(phi_theta)*(-dy)
     Jtheta2 = np.sin(phi_theta)*dphi_theta*(x-xd)-np.cos(phi_theta)*dphi_theta*(y-yd)-np.cos(phi_theta)*(-dx)-np.sin(phi_theta)*(-dy)
-    Jtheta = np.array([[Jtheta1,Jtheta2]])
+    Jtheta = np.array([[Jtheta1,Jtheta2]]).T
     Ec = np.array([[np.sin(phi_theta), - np.cos(phi_theta)],
                    [- np.cos(phi_theta), - np.sin(phi_theta)]])\
          @np.array([[x-xd],[y-yd]])
