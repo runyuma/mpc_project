@@ -22,7 +22,7 @@ class Contour:
         path = np.array(self.path)
         point = np.array([robot_state.x,robot_state.y])
         dist = np.linalg.norm(path-point,axis=1)
-        index = np.argmin(dist)[0]
+        index = np.argmin(dist)
         index = max(index,min_index)
         theta = index*self.resolution-self.path_length
         self.theta = theta
