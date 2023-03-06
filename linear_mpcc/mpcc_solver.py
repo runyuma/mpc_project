@@ -2,9 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from linear_mpcc.mpcc import linear_mpc_control
 
-def solve_mpc(robot_state, contour, param):
+def mpcc_solver(robot_state, contour, param):
     """
-    solve the linear model predictive control problem
+    solve the linear model predictive contour control problem
     :param robot_state: robot state
     :param theta: theta
     :param contour: contour
@@ -15,4 +15,5 @@ def solve_mpc(robot_state, contour, param):
     horizon = min(-theta, 5)
     contour.regression(theta, horizon)
     x,u = linear_mpc_control(robot_state,theta,contour,param)
+    
     return u[:0]

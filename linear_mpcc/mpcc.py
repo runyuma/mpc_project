@@ -3,6 +3,7 @@ import numpy as np
 import cvxpy
 import linear_mpcc.bicycle_model as model
 
+
 def linear_mpc_control(robot_state,theta0,contour,param):
     """
     linear model predictive control
@@ -16,7 +17,7 @@ def linear_mpc_control(robot_state,theta0,contour,param):
     # 2. calculate the linear and discrete time cost function
     # 3. solve the linear model predictive control problem
     # 4. return the control input
-    T = param.N
+    T = param.N     # horizon
     Q = param.Q
     P = param.P
     q = param.q
@@ -32,7 +33,7 @@ def linear_mpc_control(robot_state,theta0,contour,param):
     cost = 0.
     constraints = []
 
-    phi0,v0,delta0 = robot_state.yaw,robot_state.v,robot_state.delta
+    phi0,v0,delta0 = robot_state.yaw, robot_state.v, robot_state.delta
     A,B,C = model.calc_linear_discrete_model(phi0,v0,delta0,param)
     Ec,Jx,Jtheta = cal_error_linear(robot_state,theta0,contour)
 
@@ -89,9 +90,16 @@ def cal_error_linear(robot_state,theta,contour):
     Jtheta1 = np.cos(phi_theta)*dphi_theta*(x-xd)+np.sin(phi_theta)*dphi_theta*(y-yd)+np.sin(phi_theta)*(-dx)-np.cos(phi_theta)*(-dy)
     Jtheta2 = np.sin(phi_theta)*dphi_theta*(x-xd)-np.cos(phi_theta)*dphi_theta*(y-yd)-np.cos(phi_theta)*(-dx)-np.sin(phi_theta)*(-dy)
     Jtheta = np.array([[Jtheta1,Jtheta2]]).T
+
+    print(Jtheta1)
+    print(Jtheta2)
+    print(Jtheta.shape)
+    print()
+    
     Ec = np.array([[np.sin(phi_theta), - np.cos(phi_theta)],
                    [- np.cos(phi_theta), - np.sin(phi_theta)]])\
          @np.array([[x-xd],[y-yd]])
+    print(Ec.shape)
     X = np.array([[x],[y],[robot_state.yaw],[robot_state.v],[robot_state.delta]])
     Ec -= Jx@X
     Ec -= Jtheta@theta
