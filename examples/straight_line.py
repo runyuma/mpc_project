@@ -17,18 +17,18 @@ import matplotlib.pyplot as plt
 
 
 def set_params():
-    param_dict = {"dt": 0.1,
-                "N": 20,
-                "Q": np.diag([2.0, 20.0]),
-                "P": np.diag([2.0, 1.0]),
-                "q": np.array([5.0]),
-                "Ru": np.diag([0.1, 0.1]),
+    param_dict = {"dt": 0.5,
+                "N": 5,
+                "Q": np.diag([1.0, 20.0]),
+                "P": np.diag([1.0, 20.0]),
+                "q": np.array([10.0]),
+                "Ru": np.diag([0.1, 1]),
                 "Rv": np.diag([0.1]),
                 "C2": 2.5,
                 "max_vel":2.0,
                 "max_acc": 1.0,
-                "max_deltadot": 0.5,
-                "max_delta": 0.5,
+                "max_deltadot": 0.3,
+                "max_delta": 0.3,
                 }
 
     param = Param(param_dict)
@@ -68,12 +68,12 @@ def visualize(robot_state_real,robot_ctrl_real,param):
 
 def main():
 
-    path = [[0,i*0.1] for i in range(100)] # x constantly 0, y from 0 to 10
+    path = [[0,i*0.1] for i in range(400)] # x constantly 0, y from 0 to 10
     goalx,goaly = path[-1][0],path[-1][1]
 
     contour = Contour(path)
 
-    robot_state = ROBOT_STATE(.2,0,np.pi/2,0,0)  
+    robot_state = ROBOT_STATE(.5,0,np.pi/2,0.1,0)
     param = set_params()
 
     robot_x_real,robot_y_real,robot_yaw_real = [],[],[] # real robot state history - x,y,yaw
@@ -85,7 +85,7 @@ def main():
     while True:
         # mpcc opt
         ctrl,pred_states = mpcc_solver(robot_state, contour, param)
-        print("control",ctrl)
+        # print("control",ctrl)
         # append ctrl history
         robot_acc_real.append(ctrl[0])
         robot_ddelta_real.append(ctrl[1])

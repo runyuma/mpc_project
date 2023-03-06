@@ -21,6 +21,7 @@ def calc_linear_discrete_model(v, phi, delta, param):
     -returns:
         A, B, C : linearized transition matrices in state space model
     """
+    print()
     A = np.array([[1.0, 0.0, - param.dt * v * math.sin(phi), param.dt * math.cos(phi), 0.],
                   [0.0, 1.0, param.dt * v * math.cos(phi), param.dt * math.sin(phi), 0.],
                   [0.0, 0.0, 1.0, param.dt * delta / param.C2, param.dt * v / param.C2],

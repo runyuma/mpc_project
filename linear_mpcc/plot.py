@@ -18,7 +18,7 @@ def visualization(robot_state, contour):
     y = np.array(contour.path)[:,1]
     theta = contour.find_closest_point(robot_state)
     horizon = min(-theta, 5)
-    contour.regression(theta, horizon)
+    # contour.regression(theta, horizon)
     a1, b1, c1, d1 = contour.xparam
     a2, b2, c2, d2 = contour.yparam
     thetas = np.linspace(theta, theta + horizon, 100)
@@ -84,9 +84,9 @@ def draw_car(x,y,yaw,steer,color='black'):
     plt.plot(flWheel[0, :], flWheel[1, :], color)
     plt.plot(rlWheel[0, :], rlWheel[1, :], color)
 def mpc_visualization(states):
-    # print(states)
-    x = np.array(states)[:,0]
-    y = np.array(states)[:,1]
+    # print("predstates",states[:,0:2])
+    x = np.array(states)[0]
+    y = np.array(states)[1]
     plt.plot(x,y,'go')
 if __name__ == '__main__':
     path = [[i*0.1,20] for i in range(500)]
