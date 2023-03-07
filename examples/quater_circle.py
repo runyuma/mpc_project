@@ -69,10 +69,10 @@ def visualize(robot_state_real,robot_ctrl_real,param):
 
 def main():
 
-    # linear path
-    path = [[0,i*0.1] for i in range(400)] # x constantly 0, y from 0 to 10
-    robot_state = ROBOT_STATE(.5, 0, np.pi / 2 + 0.2, 0.1, 0)
-
+    # quater circle path
+    path = [[20*np.cos(1.57-1.57*i/314),20*np.sin(1.57-1.57*i/314)] for i in range(314)]
+    robot_state = ROBOT_STATE(0.2, 20, 0, 0, 0)
+    
     goalx,goaly = path[-1][0],path[-1][1]
     contour = Contour(path)
     param = set_params()
@@ -88,7 +88,7 @@ def main():
     while True:
         # mpcc opt
         ctrl,pred_states,theta = mpcc_solver(robot_state=robot_state, contour=contour, param=param,
-                                            prev_optim_ctrl=prev_optim_ctrl, prev_optim_theta=prev_optim_theta)
+            prev_optim_ctrl=prev_optim_ctrl, prev_optim_theta=prev_optim_theta)
         prev_optim_ctrl = ctrl
         prev_optim_theta = theta
 

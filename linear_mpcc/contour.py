@@ -2,7 +2,6 @@ import os
 import sys
 
 CURRENT_PATH = os.getcwd()
-print(CURRENT_PATH)
 sys.path.append(CURRENT_PATH)
 
 import numpy as np
@@ -42,16 +41,10 @@ class Contour:
         end_index = self.loc_index(theta+horizon)
         leng = int(horizon/self.resolution)
         s = [theta+i*self.resolution for i in range(leng)]
-        if len(s)>=3:
-            x = np.array(self.path)[start_index:start_index+leng,0]
-            y = np.array(self.path)[start_index:start_index+leng,1]
-        # else:
-        #     s = [theta + i * self.resolution for i in range(leng)]
-        #     x = np.array(self.path)[start_index-3:start_index-3+leng,0]
-        #     y = np.array(self.path)[start_index-3:start_index-3+leng,1]
-        # print(len(s),len(x))
-            self.xparam = np.polyfit(s,x,3)
-            self.yparam = np.polyfit(s,y,3)
+        x = np.array(self.path)[start_index:start_index+leng,0]
+        y = np.array(self.path)[start_index:start_index+leng,1]
+        self.xparam = np.polyfit(s,x,3)
+        self.yparam = np.polyfit(s,y,3)
  
 
 if __name__ == '__main__':
