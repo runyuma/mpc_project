@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from linear_mpcc.mpcc import linear_mpc_control
+from linear_mpcc.mpcc import linear_mpc_control_kb,linear_mpc_control_b
 
 def mpcc_solver(robot_state, contour, param, prev_optim_ctrl, prev_optim_theta):
     """
@@ -12,8 +12,8 @@ def mpcc_solver(robot_state, contour, param, prev_optim_ctrl, prev_optim_theta):
     :return: control input
     """
     theta = contour.find_closest_point(robot_state)
-    horizon = min(-theta, 5)
+    horizon = min(-theta, 10)
     contour.regression(theta, horizon)
-    x,u,theta = linear_mpc_control(robot_state,theta,contour,param,prev_optim_ctrl, prev_optim_theta)
-    
+    # x,u,theta = linear_mpc_control_kb(robot_state,theta,contour,param,prev_optim_ctrl, prev_optim_theta)
+    x, u, theta = linear_mpc_control_b(robot_state, theta, contour, param, prev_optim_ctrl, prev_optim_theta)
     return u,x,theta

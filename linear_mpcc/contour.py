@@ -28,7 +28,7 @@ class Contour:
         return theta
 
     def loc(self,theta):
-        index = int((theta+self.path_length)/self.resolution)
+        index = min(int((theta+self.path_length)/self.resolution),len(self.path)-1)
         return self.path[index]
 
     def loc_index(self,theta):

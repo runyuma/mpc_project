@@ -8,7 +8,7 @@ sys.path.append(CURRENT_PATH)
 
 from linear_mpcc.mpcc_solver import mpcc_solver
 from linear_mpcc.contour import Contour
-from linear_mpcc.bicycle_model import ROBOT_STATE
+from linear_mpcc.kinematic_bicycle_model  import ROBOT_STATE
 from linear_mpcc.config import Param
 from linear_mpcc.plot import visualization,mpc_visualization
 import numpy as np
@@ -19,7 +19,7 @@ def set_params():
     param_dict = {"dt": 0.5,
                 "N": 5,
                 "Q": np.diag([2.0, 20.0]),
-                "P": np.diag([2.0, 20.0]),
+                "P": 2*np.diag([2.0, 20.0]),
                 "q": np.array([10.0]),
                 "Ru": np.diag([0.1, 1]),
                 "Rv": np.diag([0.1]),

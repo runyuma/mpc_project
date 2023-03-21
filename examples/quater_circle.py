@@ -8,6 +8,7 @@ sys.path.append(CURRENT_PATH)
 
 from linear_mpcc.mpcc_solver import mpcc_solver
 from linear_mpcc.contour import Contour
+# from linear_mpcc.kinematic_bicycle_model  import ROBOT_STATE
 from linear_mpcc.bicycle_model import ROBOT_STATE
 from linear_mpcc.config import Param
 from linear_mpcc.plot import visualization,mpc_visualization
@@ -16,10 +17,10 @@ import matplotlib.pyplot as plt
 
 
 def set_params():
-    param_dict = {"dt": 0.5,
-                "N": 5,
+    param_dict = {"dt": 1,
+                "N": 8,
                 "Q": np.diag([2.0, 20.0]),
-                "P": np.diag([2.0, 20.0]),
+                "P": 2*np.diag([2.0, 20.0]),
                 "q": np.array([10.0]),
                 "Ru": np.diag([0.1, 1]),
                 "Rv": np.diag([0.1]),
@@ -70,8 +71,19 @@ def visualize(robot_state_real,robot_ctrl_real,param):
 def main():
 
     # quater circle path
+    resolution = 0.1
     path = [[20*np.cos(1.57-1.57*i/314),20*np.sin(1.57-1.57*i/314)] for i in range(314)]
-    robot_state = ROBOT_STATE(0.2, 20, 0, 0, 0)
+    radius = [20,25,20]
+    leng = int(radius[0]*1.57/resolution)
+    path = [[radius[0]*np.cos(1.57-1.57*i/leng),radius[0]*np.sin(1.57-1.57*i/leng)] for i in range(leng)]
+    for ind,r in enumerate(radius[1:]):
+        # x = radius[0] + 2*sum(radius[1:ind+1]) + r
+        x = path[-1][0]+r
+        leng = int(r*3.14/resolution)
+        _path = [[x-r*np.cos(3.14*i/leng),((-1)**(ind+1))*r*np.sin(3.14*i/leng)] for i in range(leng)]
+        path+=_path
+        # print(r,_path)
+    robot_state = ROBOT_STATE(0.2, 20, 0.5, 0, 0)
     
     goalx,goaly = path[-1][0],path[-1][1]
     contour = Contour(path)
@@ -93,6 +105,7 @@ def main():
         prev_optim_theta = theta
 
         one_step_ctrl = (ctrl[:,0]).reshape(2,)
+        print("one_step_ctrl: ",one_step_ctrl)
 
         # append ctrl history
         robot_acc_real.append(one_step_ctrl[0])
@@ -104,7 +117,7 @@ def main():
         robot_yaw_real.append(robot_state.yaw)
 
         # state update (transition with nonlinear simulation)
-        robot_state.state_update(acc=one_step_ctrl[0], deltadot=one_step_ctrl[1], param=param)
+        robot_state.state_update(one_step_ctrl[0], one_step_ctrl[1], param=param)
 
         visualization(robot_state, contour)
         mpc_visualization(pred_states)
@@ -117,7 +130,7 @@ def main():
             break
         
         STEP += 1
-        if STEP == 100:
+        if STEP == 250:
             print("Haven't reach goal after 100 MPCC steps. Breaking out...")
             break
 

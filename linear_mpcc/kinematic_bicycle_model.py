@@ -10,7 +10,7 @@ def calc_linear_discrete_model(v, phi, delta, param):
         x_k = [   X_k   ] : x position under Cartesian frame
               |   Y_k   | : y position under Cartesian frame
               |  phi_k  | : pose orientation under Cartesian frame (yaw)
-        u_k = |   v_k   | : vehicle velocity in the longitudinal direction (along the vehicle)
+              |   v_k   | : vehicle velocity in the longitudinal direction (along the vehicle)
               [ delta_k ] : steerging angle
 
     -arguments:
@@ -21,21 +21,23 @@ def calc_linear_discrete_model(v, phi, delta, param):
     -returns:
         A, B, C : linearized transition matrices in state space model
     """
-    A = np.array([[1.0, 0.0, - param.dt * v * math.sin(phi), ],
-                  [0.0, 1.0, param.dt * v * math.cos(phi), ],
-                  [0.0, 0.0, 1.0]
-                  ])
+    A = np.array([[1.0, 0.0, - param.dt * v * math.sin(phi), param.dt * math.cos(phi), 0.],
+                  [0.0, 1.0, param.dt * v * math.cos(phi), param.dt * math.sin(phi), 0.],
+                  [0.0, 0.0, 1.0, param.dt * delta / param.C2, param.dt * v / param.C2],
+                  [0.0, 0.0, 0.0, 1.0, 0.0],
+                  [0.0, 0.0, 0.0, 0.0, 1.0]])
 
-
-    B = np.array([[param.dt * math.cos(phi), 0.0],
-                  [param.dt * math.sin(phi), 0.0],
-                  [param.dt * delta / param.C2, param.dt * v / param.C2],
-                  ])
+    B = np.array([[0.0, 0.0],
+                  [0.0, 0.0],
+                  [0.0, 0.0],
+                  [param.dt, 0.0],
+                  [0.0, param.dt]])
 
     C = np.array([param.dt * v * math.sin(phi) * phi,
                   - param.dt * v * math.cos(phi) * phi,
                   - param.dt * v * delta / param.C2,
-                ])
+                  0.0,
+                  0.0])
 
     return A, B, C
 
@@ -48,18 +50,18 @@ class ROBOT_STATE():
         self.delta = delta
         #todo:delta
 
-    def state_update(self, vel, delta, param):
+    def state_update(self, acc, deltadot, param):
         """
         update the state of the robot (discretized, but nonlinear transition)
 
         -arguments:
-            vel      : velocity
-            delta    : steering angle
+            acc      : acceleration
+            deltadot : steering angle
             param    : model parameters
         """
-        self.v = vel
-        self.delta = delta
         dt = param.dt
         self.x += self.v * np.cos(self.yaw) * dt
         self.y += self.v * np.sin(self.yaw) * dt
         self.yaw += self.v / param.C2 * np.tan(self.delta) * dt
+        self.v += acc * dt
+        self.delta += deltadot * dt
