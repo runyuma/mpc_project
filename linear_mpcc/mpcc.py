@@ -4,7 +4,7 @@ import cvxpy
 import linear_mpcc.bicycle_model as model
 import copy
 
-def linear_mpc_control(robot_state,theta0,contour,param,prev_optim_ctrl,prev_optim_v):
+def linear_mpc_control(robot_state,obstacles,theta0,contour,param,prev_optim_ctrl,prev_optim_v):
     """
     linear model predictive control
     :param robot_state: robot state
@@ -30,6 +30,12 @@ def linear_mpc_control(robot_state,theta0,contour,param,prev_optim_ctrl,prev_opt
     v = cvxpy.Variable((1, T ))
     theta = cvxpy.Variable((1, T + 1))
 
+    if obstacles==None:
+        hasObstacles = False
+    else:
+        hasObstacles = True
+        obstacles_cp = copy.deepcopy(obstacles)
+
     cost = 0.
     constraints = []
 
@@ -47,23 +53,35 @@ def linear_mpc_control(robot_state,theta0,contour,param,prev_optim_ctrl,prev_opt
     constraints += [theta[:, 0] == theta0]
     
     for k in range(T):
-        #dynamic model contraints
+        # dynamic model contraints
         constraints += [e[:,k] == Ec.reshape(2,) + (Jx@x[:,k]) + (Jtheta@theta[:,k])]
         constraints += [x[:, k + 1] == A@x[:, k]+B@u[:, k]+C]
         constraints += [theta[:, k + 1] == theta[:, k]+param.dt*v[:,k]]
-        #input constraints
+        # input constraints
         constraints += [v[:, k]>=0]
         constraints += [u[1, k] <= param.delta_dot_max]
         constraints += [u[1, k] >= -param.delta_dot_max]
         constraints += [u[0, k] <= param.a_max]
         constraints += [u[0, k] >= -param.a_max]
-        #state constraints
+        # state constraints
         constraints += [x[3, k] <= param.v_max]
         constraints += [x[3, k] >= 0]
         constraints += [x[4, k] <= param.delta_max]
         constraints += [x[4, k] >= -param.delta_max]
         constraints += [theta[:,k]<=0]
-        #cost function
+        # collision avoidance constraints
+        if hasObstacles:
+            dist = 0.0
+            r_disc = np.sqrt((2-dist)**2+1.2**2)
+            for obs in obstacles_cp:
+                phi = obs.phi
+                Robs = np.array([[np.cos(phi),-np.sin(phi)],[np.sin(phi),np.cos(phi)]])
+                diag = np.array([[1/(obs.alpha+r_disc)**2,0],[0,1/(obs.beta+r_disc)**2]]) # needs to change later
+                Mat = Robs.T@diag@Robs
+                # print(Mat)
+                # constraints += [cvxpy.hstack([x[0,k],x[1,k]])@Mat@cvxpy.vstack([x[0,k],x[1,k]]) <= 1]
+                # constraints  += [cvxpy.]
+        # cost function
         cost += cvxpy.quad_form(x[2:3,k+1]-x[2:3,k],np.diag([10]))
         cost += cvxpy.quad_form(e[:,k],Q)
         cost += -q.T@theta[:,k]
@@ -72,6 +90,8 @@ def linear_mpc_control(robot_state,theta0,contour,param,prev_optim_ctrl,prev_opt
 
         if param.use_prev_optim_ctrl and k<T-1: # use previous optimal control solution, need iteration every step
             robot_state_cp.state_update(approx_optim_ctrl[0,k], approx_optim_ctrl[1,k], param)    # update robot state
+            for obs in obstacles_cp:
+                obs.state_update()
             theta0 = approx_optim_v[k]                                                         # update theta state
             Ec,Jx,Jtheta = cal_error_linear(robot_state_cp,theta0,contour)
 

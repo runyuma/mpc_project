@@ -2,8 +2,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from linear_mpcc.bicycle_model import ROBOT_STATE
 from linear_mpcc.contour import Contour
+from matplotlib import patches
 
-def visualization(robot_state, contour):
+def visualization(robot_state, contour, obstacles=None):
     plt.cla()
     x_min = np.min(np.array(contour.path)[:,0])
     x_max = np.max(np.array(contour.path)[:,0])
@@ -30,11 +31,14 @@ def visualization(robot_state, contour):
     plt.plot(xs,ys,c='yellow',linewidth=2)
     plt.scatter(ref[0],ref[1],c='r')
     draw_car(robot_state.x,robot_state.y,robot_state.yaw,robot_state.delta)
+    if obstacles!=None:
+        for obstacle in obstacles:
+            draw_obstacle(ax, obstacle.xo, obstacle.yo, obstacle.alpha, obstacle.beta, obstacle.phi)
 
 def draw_car(x,y,yaw,steer,color='black'):
     # draw car
-    RF = 2  # [m] distance from rear to vehicle front end of vehicle
-    RB = 2  # [m] distance from rear to vehicle back end of vehicle
+    RF = 2  # [m] distance from center to vehicle front end of vehicle
+    RB = 2  # [m] distance from center to vehicle back end of vehicle
     W = 2.4  # [m] width of vehicle
     WD = 0.7 * W  # [m] distance between left-right wheels
     WB = 2.5  # [m] Wheel base
@@ -84,6 +88,12 @@ def draw_car(x,y,yaw,steer,color='black'):
     plt.plot(rrWheel[0, :], rrWheel[1, :], color)
     plt.plot(flWheel[0, :], flWheel[1, :], color)
     plt.plot(rlWheel[0, :], rlWheel[1, :], color)
+
+def draw_obstacle(ax,x,y,alpha,beta,phi):
+    # phi = np.deg2rad(phi)
+    obs = patches.Ellipse((x,y), alpha, beta,angle=phi)
+    ax.add_patch(obs)
+
 def mpc_visualization(states):
     # print("predstates",states[:,0:2])
     x = np.array(states)[0]

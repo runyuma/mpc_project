@@ -28,8 +28,8 @@ def set_params():
                 "max_acc": 2.0,
                 "max_deltadot": 0.3,
                 "max_delta": 0.3,
-                "use_terminal_cost": True,
-                "use_prev_optim_ctrl":True
+                "use_terminal_cost": False,
+                "use_prev_optim_ctrl": True
                 }
 
     param = Param(param_dict)
@@ -71,7 +71,7 @@ def main():
 
     # quater circle path
     path = [[20*np.cos(1.57-1.57*i/314),20*np.sin(1.57-1.57*i/314)] for i in range(314)]
-    robot_state = ROBOT_STATE(0.2, 20, 0, 0, 0)
+    robot_state = ROBOT_STATE(0.2, 20, 0.8, 0, 0)
     
     goalx,goaly = path[-1][0],path[-1][1]
     contour = Contour(path)
@@ -118,7 +118,7 @@ def main():
         
         STEP += 1
         if STEP == 100:
-            print("Haven't reach goal after 100 MPCC steps. Breaking out...")
+            print("Haven't reached goal after 100 MPCC steps. Breaking out...")
             break
 
     # postprocessing

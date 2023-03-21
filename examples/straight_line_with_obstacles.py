@@ -11,6 +11,7 @@ from linear_mpcc.contour import Contour
 from linear_mpcc.bicycle_model import ROBOT_STATE
 from linear_mpcc.config import Param
 from linear_mpcc.plot import visualization,mpc_visualization
+from linear_mpcc.dyn_obst import DynamicObstacles
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -84,10 +85,15 @@ def main():
     prev_optim_ctrl = np.zeros((2,param.N)) # store the previous MPC's optimal control solution for next problem's state transitions
     prev_optim_theta = -contour.path_length * np.ones((1,param.N))   # at the start, assume it is the original value
 
+    # obstacles
+    obstacles = []
+    obs1 = DynamicObstacles(xo=-5.,yo=8.,phi=0.,alpha=4.,beta=3.,dx=.3, dy=.2, dphi=2.)
+    obstacles.append(obs1)
+
     STEP = 0
     while True:
         # mpcc opt
-        ctrl,pred_states,theta = mpcc_solver(robot_state=robot_state, contour=contour, param=param,
+        ctrl,pred_states,theta = mpcc_solver(robot_state=robot_state, obstacles_state=obstacles, contour=contour, param=param,
                                             prev_optim_ctrl=prev_optim_ctrl, prev_optim_theta=prev_optim_theta)
         prev_optim_ctrl = ctrl
         prev_optim_theta = theta
@@ -106,7 +112,10 @@ def main():
         # state update (transition with nonlinear simulation)
         robot_state.state_update(acc=one_step_ctrl[0], deltadot=one_step_ctrl[1], param=param)
 
-        visualization(robot_state, contour)
+        for obs in obstacles:
+            obs.state_update()
+
+        visualization(robot_state, contour, obstacles)
         mpc_visualization(pred_states)
         plt.pause(0.01)
 

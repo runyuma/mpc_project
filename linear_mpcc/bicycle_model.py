@@ -41,7 +41,7 @@ def calc_linear_discrete_model(v, phi, delta, param):
 
     return A, B, C
 
-class ROBOT_STATE():
+class ROBOT_STATE(): 
     def __init__(self, x=0.0, y=0.0, yaw=0.0, v=0.0,delta = 0.0):
         self.x = x
         self.y = y
@@ -65,3 +65,16 @@ class ROBOT_STATE():
         self.yaw += self.v / param.C2 * np.tan(self.delta) * dt
         self.v += acc * dt
         self.delta += deltadot * dt
+
+    def getDiscs(self):
+        """
+        Assume the vehicle is depicted with 2 discs
+        Returns the center positions of the two discs
+        """
+        x = 0.2 # invariance distance from disc center to vehicle center
+        x1 = self.x + x*np.cos(self.yaw)
+        y1 = self.y + x*np.sin(self.yaw)
+        x2 = self.x - x*np.cos(self.yaw)
+        y1 = self.y - x*np.sin(self.yaw)
+        
+        return x1,y1,x2,y2
