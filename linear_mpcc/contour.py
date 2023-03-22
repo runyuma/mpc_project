@@ -45,6 +45,11 @@ class Contour:
         y = np.array(self.path)[start_index:start_index+leng,1]
         self.xparam = np.polyfit(s,x,3)
         self.yparam = np.polyfit(s,y,3)
+
+    def get_location(self,theta):
+        x = np.polyval(self.xparam,theta)
+        y = np.polyval(self.yparam,theta)
+        return x,y
  
 
 if __name__ == '__main__':

@@ -84,11 +84,13 @@ def draw_car(x,y,yaw,steer,color='black'):
     plt.plot(rrWheel[0, :], rrWheel[1, :], color)
     plt.plot(flWheel[0, :], flWheel[1, :], color)
     plt.plot(rlWheel[0, :], rlWheel[1, :], color)
-def mpc_visualization(states):
+def mpc_visualization(states,contour,theta):
     # print("predstates",states[:,0:2])
     x = np.array(states)[0]
     y = np.array(states)[1]
     plt.plot(x,y,'go')
+    xr,yr = contour.get_location(theta)
+    plt.plot(xr,yr,'yo')
 if __name__ == '__main__':
     path = [[i*0.1,20] for i in range(500)]
     # path = [[20*np.cos(1.57-1.57*i/314),20*np.sin(1.57-1.57*i/314)] for i in range(314)]

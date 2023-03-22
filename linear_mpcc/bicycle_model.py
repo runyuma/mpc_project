@@ -11,7 +11,7 @@ def calc_linear_discrete_model(v, phi, delta, param):
               |   Y_k   | : y position under Cartesian frame
               |  phi_k  | : pose orientation under Cartesian frame (yaw)
         u_k = |   v_k   | : vehicle velocity in the longitudinal direction (along the vehicle)
-              [ delta_k ] : steerging angle
+              [ delta_k-delta0 ] : steerging angle
 
     -arguments:
         v     : speed: v_bar
@@ -36,6 +36,10 @@ def calc_linear_discrete_model(v, phi, delta, param):
                   - param.dt * v * math.cos(phi) * phi,
                   - param.dt * v * delta / param.C2,
                 ])
+    # C = np.array([param.dt * v * math.sin(phi) * phi,
+    #               - param.dt * v * math.cos(phi) * phi,
+    #               0,
+    #               ])
 
     return A, B, C
 
@@ -46,9 +50,10 @@ class ROBOT_STATE():
         self.yaw = yaw
         self.v = v
         self.delta = delta
+        self.thetadot = 0.1
         #todo:delta
 
-    def state_update(self, vel, delta, param):
+    def state_update(self, vel, delta,thetadot, param):
         """
         update the state of the robot (discretized, but nonlinear transition)
 
@@ -57,8 +62,12 @@ class ROBOT_STATE():
             delta    : steering angle
             param    : model parameters
         """
+
         self.v = vel
         self.delta = delta
+        # self.delta += delta
+        # self.delta = np.clip(self.delta, -param.delta_max+0.0001, param.delta_max-0.0001)
+        self.thetadot = thetadot
         dt = param.dt
         self.x += self.v * np.cos(self.yaw) * dt
         self.y += self.v * np.sin(self.yaw) * dt
