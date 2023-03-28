@@ -94,8 +94,8 @@ def linear_mpc_control_b(robot_state,theta0,contour,param,prev_optim_ctrl,prev_o
     if param.use_terminal_cost:
         if param.use_prev_optim_ctrl:
             thetadot0 = approx_optim_ctrl[2,-1]
-        LQR_A,LQR_B,LQR_res = calculate_LQR(robot_state, theta0, contour, param, thetadot=thetadot0)
-        terminal_cost = calculate_terminal_cost(LQR_A,LQR_B,param)
+        LQR_A,LQR_B,LQR_res = calculate_LQR_b(robot_state, theta0, contour, param, thetadot=thetadot0)
+        terminal_cost = calculate_terminal_cost_b(LQR_A,LQR_B,param)
         P = terminal_cost[0]
         cost += cvxpy.quad_form(cvxpy.hstack([e[:,T],theta[:, T]]), P)
 
@@ -150,12 +150,12 @@ def linear_mpc_control_kb(robot_state, theta0, contour, param, prev_optim_ctrl, 
     # 4. return the control input
     T = param.N  # horizon
     Q = param.Q
-    P = param.P
     q = param.q
     R = param.R
+    Rdu = param.Rdu
     Rv = param.Rv
 
-    e = cvxpy.Variable((2, T + 1))
+    e = cvxpy.Variable((3, T + 1))
     x = cvxpy.Variable((5, T + 1))
     u = cvxpy.Variable((2, T))
     v = cvxpy.Variable((1, T))
@@ -179,10 +179,11 @@ def linear_mpc_control_kb(robot_state, theta0, contour, param, prev_optim_ctrl, 
 
     for k in range(T):
         # dynamic model contraints
-        constraints += [e[:, k] == Ec.reshape(2, ) + (Jx @ x[:3, k]) + (Jtheta @ theta[:, k])]
+        constraints += [e[:, k] == Ec.reshape(3, ) + (Jx @ x[:3, k]) + (Jtheta @ theta[:, k])]
         constraints += [x[:, k + 1] == A @ x[:, k] + B @ u[:, k] + C]
         constraints += [theta[:, k + 1] == theta[:, k] + param.dt * v[:, k]]
-
+        if k>0:
+            constraints += [e[1,k]>=0]
 
         # input constraints
         constraints += [v[:, k] >= 0]
@@ -197,25 +198,28 @@ def linear_mpc_control_kb(robot_state, theta0, contour, param, prev_optim_ctrl, 
         constraints += [x[4, k] >= -param.delta_max]
         constraints += [theta[:, k] <= 0]
         # cost function
-        cost += cvxpy.quad_form(x[2:3, k + 1] - x[2:3, k], np.diag([10]))
         cost += cvxpy.quad_form(e[:, k], Q)
-        # cost += -q.T@theta[:,k]
-        cost += cvxpy.quad_form(theta[:, k], np.diag([0.1]))
-        cost += cvxpy.quad_form(u[:, k], R)
+        cost += cvxpy.quad_form(theta[:, k], q)
+        cost += cvxpy.quad_form(x[3:, k]-np.array([0,delta0]), R)
+        cost += cvxpy.quad_form(u[:, k], Rdu)
         cost += cvxpy.quad_form(v[:, k], Rv)
 
         if param.use_prev_optim_ctrl and k < T - 1:  # use previous optimal control solution, need iteration every step
-            robot_state_cp.state_update(approx_optim_ctrl[0, k], approx_optim_ctrl[1, k], param)  # update robot state
+            robot_state_cp.state_update(approx_optim_ctrl[0, k], approx_optim_ctrl[1, k], approx_optim_ctrl[2,k],param)  # update robot state
             theta0 = approx_optim_v[k]  # update theta state
             Ec, Jx, Jtheta = cal_error_linear(robot_state_cp, theta0, contour)
 
+
     # terminal cost
     if param.use_terminal_cost:
-        cost += cvxpy.quad_form(e[:, T], P)
-        # cost += -q.T@theta[:,T]
-        cost += cvxpy.quad_form(theta[:, T], np.diag([0.1]))
+        if param.use_prev_optim_ctrl:
+            thetadot0 = approx_optim_ctrl[2, -1]
+        LQR_A, LQR_B, LQR_res = calculate_LQR_kb(robot_state, theta0, contour, param, thetadot=thetadot0)
+        terminal_cost = calculate_terminal_cost_kb(LQR_A, LQR_B, param)
+        P = terminal_cost[0]
+        cost += cvxpy.quad_form(cvxpy.hstack([e[:, T], theta[:, T], x[3:, T]]), P)
 
-    constraints += [e[:, T] == Ec.reshape(2, ) + (Jx @ x[:3, T]) + (Jtheta @ theta[:, T])]
+    constraints += [e[:, T] == Ec.reshape(3, ) + (Jx @ x[:3, T]) + (Jtheta @ theta[:, T])]
     constraints += [x[3, T] <= param.v_max]
     constraints += [x[3, T] >= 0]
     constraints += [x[4, T] <= param.delta_max]
@@ -233,8 +237,21 @@ def linear_mpc_control_kb(robot_state, theta0, contour, param, prev_optim_ctrl, 
         theta = theta.value
     else:
         print("Cannot solve linear mpc!")
+    log = {'cost': cost.value, 'error': e[:, 0]}
+    if param.use_terminal_cost:
+        x_ter = np.hstack([e[:, T], theta[:, T], x[3:, T]])
+        log['terminal_cost'] = (x_ter.T@P@x_ter)
+        K = LQR_res[0]
+        u_lqr = -K@x_ter
+        x_ter_plus = LQR_A@x_ter+LQR_B@u_lqr
+        print(x_ter_plus)
+        Q = np.diag([param.Q[0][0], param.Q[1][1], param.Q[2][2], param.q[0][0], param.R[0][0], param.R[1][1]])
+        R = np.diag([param.Rdu[0][0], param.Rdu[1][1], param.Rv[0][0]])
+        terminal_costnext = (x_ter_plus.T@P@x_ter_plus) + (x_ter.T@Q@x_ter+u_lqr.T@R@u_lqr )
+        log['terminal_costnext'] = terminal_costnext
+        log['terminal_stage_cost'] = (x_ter.T@Q@x_ter+u_lqr.T@R@u_lqr )
 
-    return x, u, theta
+    return x, u, theta,v,e,log
 def cal_error_linear(robot_state,theta,contour):
     # E = Ec + Jx*X + Jtheta*theta = E0 + Jx*(X-X0) + Jtheta*(theta-theta0)
     x = robot_state.x
@@ -246,6 +263,7 @@ def cal_error_linear(robot_state,theta,contour):
     dx = 3*a1*theta**2 + 2*b1*theta + c1
     dy = 3*a2*theta**2 + 2*b2*theta + c2
     phi_theta = np.arctan2(dy,dx)
+    print(phi,phi_theta)
     # numerical derivative
     interv = 0.1
     dxp = 3*a1*(theta+interv)**2 + 2*b1*(theta+interv) + c1
@@ -272,7 +290,71 @@ def cal_error_linear(robot_state,theta,contour):
     Ec -= (Jtheta@np.array([theta])).reshape((3,1))
 
     return Ec,Jx,Jtheta
-def calculate_LQR(robot_state,theta0,contour,param,thetadot):
+def calculate_LQR_kb(robot_state,theta0,contour,param,thetadot):
+    # A, B is the transition matrix of error dynamics
+    # state = [error_lateral,error_longitudinal,error_heading,theta,velocity,theta]
+    # Input = [steering_angle,velocity, theta_dot]
+    A = np.eye(6)
+
+    # calculate dphi/dtheta
+    x = robot_state.x
+    y = robot_state.y
+    xd, yd = contour.loc(theta0)
+    a1, b1, c1, d1 = contour.xparam
+    a2, b2, c2, d2 = contour.yparam
+    dx = 3 * a1 * theta0 ** 2 + 2 * b1 * theta0 + c1
+    dy = 3 * a2 * theta0 ** 2 + 2 * b2 * theta0 + c2
+    phi_theta = np.arctan2(dy, dx)
+    # numerical derivative
+    interv = 0.1
+    dxp = 3 * a1 * (theta0 + interv) ** 2 + 2 * b1 * (theta0 + interv) + c1
+    dyp = 3 * a2 * (theta0 + interv) ** 2 + 2 * b2 * (theta0 + interv) + c2
+    dxm = 3 * a1 * (theta0 - interv) ** 2 + 2 * b1 * (theta0 - interv) + c1
+    dym = 3 * a2 * (theta0 - interv) ** 2 + 2 * b2 * (theta0 - interv) + c2
+    phi_theta_p = np.arctan2(dyp, dxp)
+    phi_theta_m = np.arctan2(dym, dxm)
+    dphi_theta = (phi_theta_p - phi_theta_m) / (2 * interv)
+
+    k = thetadot*dphi_theta
+    phi0, v0, delta0 = robot_state.yaw, robot_state.v, robot_state.delta
+    A[0][1] = -k*param.dt
+    A[1][0] = k*param.dt
+    A[0][2] = v0*param.dt
+    A[1][4] = -param.dt
+    # print(-delta0/param.C2*param.dt)
+    A[2][4] = -delta0/param.C2*param.dt
+    A[2][5] = -v0/param.C2*param.dt
+
+
+    B = np.array([[0,0,0],
+                  [0,0,param.dt],
+                  [0,0,dphi_theta*param.dt],
+                  [0,0,param.dt],
+                  [param.dt,0,0],
+                  [0,param.dt,0]
+    ])
+    Q = np.diag([param.Q[0][0],param.Q[1][1],param.Q[2][2],param.q[0][0],param.R[0][0],param.R[1][1]])
+    R = np.diag([param.Rdu[0][0],param.Rdu[1][1],param.Rv[0][0]])
+    # print("A",A)
+    # print("B",B)
+
+    C = control.ctrb(A,B)
+    print(np.linalg.matrix_rank(C))
+    # lqr
+    K = control.dlqr(A,B,Q,R)
+    # print("K",K[0])
+
+    return A,B,K
+def calculate_terminal_cost_kb(A,B,param):
+    Q = np.diag([param.Q[0][0], param.Q[1][1], param.Q[2][2], param.q[0][0], param.R[0][0], param.R[1][1]])
+    R = np.diag([param.Rdu[0][0], param.Rdu[1][1], param.Rv[0][0]])
+    P = control.dare(A,B,Q,R)
+    # print("p",P[0])
+    return P
+
+
+
+def calculate_LQR_b(robot_state,theta0,contour,param,thetadot):
     # A, B is the transition matrix of error dynamics
     A = np.eye(4)
 
@@ -320,7 +402,7 @@ def calculate_LQR(robot_state,theta0,contour,param,thetadot):
     return A,B,K
 
 
-def calculate_terminal_cost(A,B,param):
+def calculate_terminal_cost_b(A,B,param):
     Q = np.diag([param.Q[0][0],param.Q[1][1],param.Q[2][2],param.q[0][0]])
     R = np.diag([param.R[0][0],param.R[1][1],param.Rv[0][0]])
     P = control.dare(A,B,Q,R)

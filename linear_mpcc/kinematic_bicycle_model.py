@@ -50,7 +50,7 @@ class ROBOT_STATE():
         self.delta = delta
         #todo:delta
 
-    def state_update(self, acc, deltadot, param):
+    def state_update(self, acc, deltadot,thetadot, param):
         """
         update the state of the robot (discretized, but nonlinear transition)
 

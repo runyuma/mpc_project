@@ -8,8 +8,8 @@ sys.path.append(CURRENT_PATH)
 
 from linear_mpcc.mpcc_solver import mpcc_solver
 from linear_mpcc.contour import Contour
-# from linear_mpcc.kinematic_bicycle_model  import ROBOT_STATE
-from linear_mpcc.bicycle_model import ROBOT_STATE
+from linear_mpcc.kinematic_bicycle_model  import ROBOT_STATE
+# from linear_mpcc.bicycle_model import ROBOT_STATE
 from linear_mpcc.config import Param
 from linear_mpcc.plot import visualization,mpc_visualization
 import numpy as np
@@ -17,12 +17,30 @@ import matplotlib.pyplot as plt
 
 
 def set_params():
+    # for bycle model
     param_dict = {"dt": 0.5,
                 "N": 10,
                 "Q": np.diag([4.0, 20.0, 5]),
                 "P": 2*np.diag([2.0, 20.0]),
                 "q": np.array([[0.02]]) ,
-                "Ru": np.diag([0.1, 10]),
+                "R": np.diag([0.1, 10]),
+                "Rdu": np.diag([0.1, 10]),
+                "Rv": np.diag([0.1]),
+                "C2": 2.5,
+                "max_vel":2.0,
+                "max_acc": 2.0,
+                "max_deltadot": 0.15,
+                "max_delta": 0.3,
+                "use_terminal_cost": True,
+                "use_prev_optim_ctrl":True
+                }
+    param_dict = {"dt": 0.5,
+                "N": 10,
+                "Q": np.diag([4.0, 20.0, 1]),
+                "P": 2*np.diag([2.0, 20.0]),
+                "q": np.array([[0.02]]) ,
+                "R": np.diag([0.1, 1]),
+                "Rdu": np.diag([0.1, 1]),
                 "Rv": np.diag([0.1]),
                 "C2": 2.5,
                 "max_vel":2.0,
@@ -99,10 +117,10 @@ def main():
         visualization(robot_state, contour)
         mpc_visualization(pred_states,contour,theta)
         # print(contour.get_location(theta))
-
-        cost.append(log['cost'])
-        terminal_cost.append(log['terminal_cost'])
-        terminal_stage_cost.append(log['terminal_stage_cost'])
+        if param.use_terminal_cost:
+            cost.append(log['cost'])
+            terminal_cost.append(log['terminal_cost'])
+            terminal_stage_cost.append(log['terminal_stage_cost'])
         error.append(log["error"])
         plt.pause(0.0001)
 
@@ -125,18 +143,18 @@ def main():
     axs1[0].plot(robot_acc_real)
     axs1[0].set_title("Control sequence optimized by MPCC")
     axs1[0].set_xlabel('timestep') # later change to time (divide by dt)
-    axs1[0].set_ylabel('vel (m/s^2)')
+    axs1[0].set_ylabel('acc (m/s^2)')
     # steering change
     axs1[1].plot(robot_ddelta_real)
     axs1[1].set_xlabel('timestep') # later change to time (divide by dt)
-    axs1[1].set_ylabel('delta (rad/s)')
-
-    axs2[0].set_title("terminal cost")
-    axs2[0].plot(terminal_cost,label='terminal cost')
-    axs2[0].plot(terminal_stage_cost,label = 'terminal_stage_cost')
-    axs2[0].legend()
-    axs2[1].set_title("cost")
-    axs2[1].plot(cost)
+    axs1[1].set_ylabel('d delta (rad/s)')
+    if param.use_terminal_cost:
+        axs2[0].set_title("terminal cost")
+        axs2[0].plot(terminal_cost,label='terminal cost')
+        axs2[0].plot(terminal_stage_cost,label = 'terminal_stage_cost')
+        axs2[0].legend()
+        axs2[1].set_title("cost")
+        axs2[1].plot(cost)
 
     axs3[0].set_title("lateral error")
     axs3[0].plot([i[0] for i in error],label='x')
