@@ -17,12 +17,22 @@ class Contour:
         self.theta = -self.path_length
 
     def find_closest_point(self, robot_state):
-        min_index = (self.theta+self.path_length)/self.resolution
+        min_index = int((self.theta+self.path_length)/self.resolution)
         path = np.array(self.path)
         point = np.array([robot_state.x,robot_state.y])
         dist = np.linalg.norm(path-point,axis=1)
         index = np.argmin(dist)
-        index = max(index,min_index)
+
+        # longitudinal distance larger than 0
+        index = max(index, min_index)
+        el = -10
+        while el<0.2 and index<len(self.path)-1:
+            # print(index)
+            phi = np.arctan2(path[index+1][1]-path[index][1],path[index+1][0]-path[index][0])
+            dist = np.array([robot_state.x-path[index][0],robot_state.y-path[index][1]])
+            el = -np.cos(phi)*dist[0]-np.sin(phi)*dist[1]
+            index+=1
+
         theta = index*self.resolution-self.path_length
         self.theta = theta
         return theta
@@ -37,14 +47,15 @@ class Contour:
 
     def regression(self,theta,horizon):
         # got local parametric contour
-        start_index = self.loc_index(theta)
-        end_index = self.loc_index(theta+horizon)
-        leng = int(horizon/self.resolution)
-        s = [theta+i*self.resolution for i in range(leng)]
-        x = np.array(self.path)[start_index:start_index+leng,0]
-        y = np.array(self.path)[start_index:start_index+leng,1]
-        self.xparam = np.polyfit(s,x,3)
-        self.yparam = np.polyfit(s,y,3)
+        if horizon>5:
+            start_index = self.loc_index(theta)
+            end_index = self.loc_index(theta+horizon)
+            leng = int(horizon/self.resolution)
+            s = [theta+i*self.resolution for i in range(leng)]
+            x = np.array(self.path)[start_index:start_index+leng,0]
+            y = np.array(self.path)[start_index:start_index+leng,1]
+            self.xparam = np.polyfit(s,x,3)
+            self.yparam = np.polyfit(s,y,3)
 
     def get_location(self,theta):
         x = np.polyval(self.xparam,theta)

@@ -52,6 +52,11 @@ def linear_mpc_control_b(robot_state,theta0,contour,param,prev_optim_ctrl,prev_o
         constraints += [e[:,k] == Ec.reshape(3,) + (Jx@x[:3,k]) + (Jtheta@theta[:,k])]
         constraints += [x[:, k + 1] == A@x[:, k]+B@u[:, k]+C]
         constraints += [theta[:, k + 1] == theta[:, k]+param.dt*v[:,k]]
+
+        #state constraints
+        if k>0:
+            constraints += [e[1,k]>=0]
+
         #input constraints
         constraints += [v[:, k]>=0]
         constraints += [u[0, k] <= param.v_max]
@@ -71,9 +76,7 @@ def linear_mpc_control_b(robot_state,theta0,contour,param,prev_optim_ctrl,prev_o
 
         constraints += [theta[:,k]<=0]
         #cost function
-        # cost += cvxpy.quad_form(x[2:3,k+1]-x[2:3,k],np.diag([10]))
         cost += cvxpy.quad_form(e[:,k],Q)
-        # cost += -q.T@theta[:,k]
         cost += cvxpy.quad_form(theta[:,k],q)
         cost += cvxpy.quad_form(u[:,k]-np.array([0,delta0]),R)
         cost += cvxpy.quad_form(v[:,k],Rv)
@@ -179,6 +182,8 @@ def linear_mpc_control_kb(robot_state, theta0, contour, param, prev_optim_ctrl, 
         constraints += [e[:, k] == Ec.reshape(2, ) + (Jx @ x[:3, k]) + (Jtheta @ theta[:, k])]
         constraints += [x[:, k + 1] == A @ x[:, k] + B @ u[:, k] + C]
         constraints += [theta[:, k + 1] == theta[:, k] + param.dt * v[:, k]]
+
+
         # input constraints
         constraints += [v[:, k] >= 0]
         constraints += [u[1, k] <= param.delta_dot_max]
@@ -310,6 +315,7 @@ def calculate_LQR(robot_state,theta0,contour,param,thetadot):
     print(np.linalg.matrix_rank(C))
     # lqr
     K = control.dlqr(A,B,Q,R)
+    print("K",K[0])
 
     return A,B,K
 
