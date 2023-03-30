@@ -31,6 +31,7 @@ class Contour:
             phi = np.arctan2(path[index+1][1]-path[index][1],path[index+1][0]-path[index][0])
             dist = np.array([robot_state.x-path[index][0],robot_state.y-path[index][1]])
             el = -np.cos(phi)*dist[0]-np.sin(phi)*dist[1]
+            # print("find closest point: el",el)
             index+=1
 
         theta = index*self.resolution-self.path_length

@@ -10,6 +10,7 @@ class Param:
         self.P = param_dict["P"]      # terminal cost
         self.q = param_dict["q"]      # as defined in cost function
         self.R = param_dict["R"]     # as defined in cost function (Ru)
+
         self.Rdu = param_dict["Rdu"]    # as defined in cost function (Ru)
         self.Rv = param_dict["Rv"]    # as defined in cost function (Rv)
         self.delta_max = param_dict["max_delta"]    # maximum steering angle (rad)
@@ -18,7 +19,10 @@ class Param:
         self.a_max = param_dict["max_acc"]    # maximum acceleration (m/s^2)
 
         # vehicle parameters
+        self.C1 = param_dict["C1"]    # wheelbase (NOT reciprocal)
         self.C2 = param_dict["C2"]    # inter-axle distance (NOT reciprocal)
+        self.disc_offset = param_dict["disc_offset"]
+        self.radius = param_dict["radius"]
 
         # MPC modifications
         self.use_terminal_cost = param_dict["use_terminal_cost"]          # whether to use terminal cost in objective

@@ -82,7 +82,7 @@ def linear_mpc_control_b(robot_state,theta0,contour,param,prev_optim_ctrl,prev_o
         cost += cvxpy.quad_form(v[:,k],Rv)
 
         if param.use_prev_optim_ctrl and k<T-1: # use previous optimal control solution, need iteration every step
-            robot_state_cp.state_update(approx_optim_ctrl[0,k], approx_optim_ctrl[1,k],approx_optim_ctrl[2,k], param)    # update robot state
+            robot_state_cp.state_update(approx_optim_ctrl[0,k+1], approx_optim_ctrl[1,k+1],approx_optim_ctrl[2,k+1], param)    # update robot state
             delta0 = approx_optim_ctrl[1,k]                                                         # update delta state
             theta0 = prev_optim_theta[k]                                                         # update theta state
             Ec,Jx,Jtheta = cal_error_linear(robot_state_cp,theta0,contour)
@@ -135,7 +135,7 @@ def linear_mpc_control_b(robot_state,theta0,contour,param,prev_optim_ctrl,prev_o
     return x, u, theta,v,e,log
 
 
-def linear_mpc_control_kb(robot_state, theta0, contour, param, prev_optim_ctrl, prev_optim_v):
+def linear_mpc_control_kb(robot_state, theta0, contour,obstacles, param, prev_optim_ctrl, prev_optim_v):
     """
     linear bicycle model predictive control
     :param robot_state: robot state
@@ -158,6 +158,7 @@ def linear_mpc_control_kb(robot_state, theta0, contour, param, prev_optim_ctrl, 
     e = cvxpy.Variable((3, T + 1))
     x = cvxpy.Variable((5, T + 1))
     u = cvxpy.Variable((2, T))
+    vel = cvxpy.Variable((2, T)) # velocity in global frame for VO
     v = cvxpy.Variable((1, T))
     theta = cvxpy.Variable((1, T + 1))
 
@@ -173,6 +174,8 @@ def linear_mpc_control_kb(robot_state, theta0, contour, param, prev_optim_ctrl, 
     A, B, C = kinematic_bicycle_model.calc_linear_discrete_model(v0, phi0, delta0, param)
     Ec, Jx, Jtheta = cal_error_linear(robot_state, theta0, contour)
 
+
+
     x0 = np.array([robot_state.x, robot_state.y, robot_state.yaw, robot_state.v, robot_state.delta])
     constraints += [x[:, 0] == x0]
     constraints += [theta[:, 0] == theta0]
@@ -184,6 +187,17 @@ def linear_mpc_control_kb(robot_state, theta0, contour, param, prev_optim_ctrl, 
         constraints += [theta[:, k + 1] == theta[:, k] + param.dt * v[:, k]]
         if k>0:
             constraints += [e[1,k]>=0]
+        # velocity obstacle constraints
+        Vov = np.array([np.cos(phi0), np.sin(phi0)])
+        Vod = v0*param.C1*np.array([-np.sin(phi0), np.cos(phi0)])
+        Vophi = v0*np.array([-np.sin(phi0), np.cos(phi0)])
+        VophiC = -v0*np.array([-np.sin(phi0), np.cos(phi0)])*phi0
+        # constraints += [vel[:, k] == Vov * x[3, k] +Vod*x[4, k]]
+        constraints+= [vel[:,k]==Vov*x[3, k]+Vod*x[4, k]+Vophi*x[2, k]+VophiC]
+        if obstacles is not None:
+            if k>0:
+                for obs in obstacles:
+                    constraints += [vel[0, k] * obs[0] + vel[1, k] * obs[1]+ obs[2]>= 0]
 
         # input constraints
         constraints += [v[:, k] >= 0]
@@ -205,16 +219,17 @@ def linear_mpc_control_kb(robot_state, theta0, contour, param, prev_optim_ctrl, 
         cost += cvxpy.quad_form(v[:, k], Rv)
 
         if param.use_prev_optim_ctrl and k < T - 1:  # use previous optimal control solution, need iteration every step
-            robot_state_cp.state_update(approx_optim_ctrl[0, k], approx_optim_ctrl[1, k], approx_optim_ctrl[2,k],param)  # update robot state
-            theta0 = approx_optim_v[k]  # update theta state
-            Ec, Jx, Jtheta = cal_error_linear(robot_state_cp, theta0, contour)
+            robot_state_cp.state_update(approx_optim_ctrl[0, k+1], approx_optim_ctrl[1, k+1], approx_optim_ctrl[2,k+1],param)  # update robot state
+            theta0_ = approx_optim_v[k+1]  # update theta state
+            # print("theta0_",theta0_)
+            Ec, Jx, Jtheta = cal_error_linear(robot_state_cp, theta0_, contour)
 
 
     # terminal cost
     if param.use_terminal_cost:
         if param.use_prev_optim_ctrl:
             thetadot0 = approx_optim_ctrl[2, -1]
-        LQR_A, LQR_B, LQR_res = calculate_LQR_kb(robot_state, theta0, contour, param, thetadot=thetadot0)
+        LQR_A, LQR_B, LQR_res = calculate_LQR_kb(robot_state, theta0_, contour, param, thetadot=thetadot0)
         terminal_cost = calculate_terminal_cost_kb(LQR_A, LQR_B, param)
         P = terminal_cost[0]
         cost += cvxpy.quad_form(cvxpy.hstack([e[:, T], theta[:, T], x[3:, T]]), P)
@@ -234,7 +249,11 @@ def linear_mpc_control_kb(robot_state, theta0, contour, param, prev_optim_ctrl, 
         u = u.value
         v = v.value
         e = e.value
+        vel = vel.value
         theta = theta.value
+        # print("theta",theta0,theta)
+        # print("v",x[3,:])
+        print("vel",vel)
     else:
         print("Cannot solve linear mpc!")
     log = {'cost': cost.value, 'error': e[:, 0]}
@@ -244,7 +263,7 @@ def linear_mpc_control_kb(robot_state, theta0, contour, param, prev_optim_ctrl, 
         K = LQR_res[0]
         u_lqr = -K@x_ter
         x_ter_plus = LQR_A@x_ter+LQR_B@u_lqr
-        print(x_ter_plus)
+        # print(x_ter_plus)
         Q = np.diag([param.Q[0][0], param.Q[1][1], param.Q[2][2], param.q[0][0], param.R[0][0], param.R[1][1]])
         R = np.diag([param.Rdu[0][0], param.Rdu[1][1], param.Rv[0][0]])
         terminal_costnext = (x_ter_plus.T@P@x_ter_plus) + (x_ter.T@Q@x_ter+u_lqr.T@R@u_lqr )
@@ -263,7 +282,7 @@ def cal_error_linear(robot_state,theta,contour):
     dx = 3*a1*theta**2 + 2*b1*theta + c1
     dy = 3*a2*theta**2 + 2*b2*theta + c2
     phi_theta = np.arctan2(dy,dx)
-    print(phi,phi_theta)
+    # print(phi,phi_theta)
     # numerical derivative
     interv = 0.1
     dxp = 3*a1*(theta+interv)**2 + 2*b1*(theta+interv) + c1
@@ -284,6 +303,7 @@ def cal_error_linear(robot_state,theta,contour):
                    [- np.cos(phi_theta), - np.sin(phi_theta),0],
                    [0,0,-1]])\
          @np.array([[x-xd],[y-yd],[phi-phi_theta]])
+    # print("Ec",Ec)
     X = np.array([[x],[y],[robot_state.yaw],])
 
     Ec -= Jx@X
@@ -292,7 +312,7 @@ def cal_error_linear(robot_state,theta,contour):
     return Ec,Jx,Jtheta
 def calculate_LQR_kb(robot_state,theta0,contour,param,thetadot):
     # A, B is the transition matrix of error dynamics
-    # state = [error_lateral,error_longitudinal,error_heading,theta,velocity,theta]
+    # state = [error_lateral,error_longitudinal,error_heading,theta,velocity,delta]
     # Input = [steering_angle,velocity, theta_dot]
     A = np.eye(6)
 
@@ -342,7 +362,7 @@ def calculate_LQR_kb(robot_state,theta0,contour,param,thetadot):
     print(np.linalg.matrix_rank(C))
     # lqr
     K = control.dlqr(A,B,Q,R)
-    # print("K",K[0])
+    print("K",K[0])
 
     return A,B,K
 def calculate_terminal_cost_kb(A,B,param):
@@ -408,6 +428,9 @@ def calculate_terminal_cost_b(A,B,param):
     P = control.dare(A,B,Q,R)
     print("p",P[0])
     return P
+
+def calculate_velocity_obstacle():
+    pass
 
 
 

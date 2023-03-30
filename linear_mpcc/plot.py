@@ -3,17 +3,15 @@ import numpy as np
 from linear_mpcc.bicycle_model import ROBOT_STATE
 from linear_mpcc.contour import Contour
 
-def visualization(robot_state, contour):
-    plt.cla()
+def visualization(robot_state, contour,axis,obstacles = None, ):
     x_min = np.min(np.array(contour.path)[:,0])
     x_max = np.max(np.array(contour.path)[:,0])
     y_min = np.min(np.array(contour.path)[:,1])
     y_max = np.max(np.array(contour.path)[:,1])
     bound = 5
-    plt.xlim(x_min-bound,x_max+bound)
-    plt.ylim(y_min-bound,y_max+bound)
-    ax = plt.gca()
-    ax.set_aspect(1)
+    axis.set_xlim(x_min-bound,x_max+bound)
+    axis.set_ylim(y_min-bound,y_max+bound)
+
     
     x = np.array(contour.path)[:,0]
     y = np.array(contour.path)[:,1]
@@ -26,12 +24,17 @@ def visualization(robot_state, contour):
     xs = a1 * thetas ** 3 + b1 * thetas ** 2 + c1 * thetas + d1
     ys = a2 * thetas ** 3 + b2 * thetas ** 2 + c2 * thetas + d2
     ref = contour.loc(theta)
-    plt.plot(x,y,c='b',)
-    plt.plot(xs,ys,c='yellow',linewidth=2)
-    plt.scatter(ref[0],ref[1],c='r')
-    draw_car(robot_state.x,robot_state.y,robot_state.yaw,robot_state.delta)
+    axis.plot(x,y,c='b',)
+    axis.plot(xs,ys,c='yellow',linewidth=2)
+    axis.scatter(ref[0],ref[1],c='r')
+    draw_car(robot_state.x,robot_state.y,robot_state.yaw,robot_state.delta,axis)
 
-def draw_car(x,y,yaw,steer,color='black'):
+    if obstacles is not None:
+        for obs in obstacles:
+            pos = obs.pos
+            axis.scatter(pos[0],pos[1],c='black',s=100)
+
+def draw_car(x,y,yaw,steer,axis,color='black'):
     # draw car
     RF = 2  # [m] distance from rear to vehicle front end of vehicle
     RB = 2  # [m] distance from rear to vehicle back end of vehicle
@@ -79,18 +82,18 @@ def draw_car(x,y,yaw,steer,color='black'):
     rlWheel += np.array([[x], [y]])
     car += np.array([[x], [y]])
 
-    plt.plot(car[0, :], car[1, :], color)
-    plt.plot(frWheel[0, :], frWheel[1, :], color)
-    plt.plot(rrWheel[0, :], rrWheel[1, :], color)
-    plt.plot(flWheel[0, :], flWheel[1, :], color)
-    plt.plot(rlWheel[0, :], rlWheel[1, :], color)
-def mpc_visualization(states,contour,theta):
+    axis.plot(car[0, :], car[1, :], color)
+    axis.plot(frWheel[0, :], frWheel[1, :], color)
+    axis.plot(rrWheel[0, :], rrWheel[1, :], color)
+    axis.plot(flWheel[0, :], flWheel[1, :], color)
+    axis.plot(rlWheel[0, :], rlWheel[1, :], color)
+def mpc_visualization(states,contour,theta,axis):
     # print("predstates",states[:,0:2])
     x = np.array(states)[0]
     y = np.array(states)[1]
-    plt.plot(x,y,'go')
+    axis.plot(x,y,'go')
     xr,yr = contour.get_location(theta)
-    plt.plot(xr,yr,'yo')
+    axis.plot(xr,yr,'yo')
 if __name__ == '__main__':
     path = [[i*0.1,20] for i in range(500)]
     # path = [[20*np.cos(1.57-1.57*i/314),20*np.sin(1.57-1.57*i/314)] for i in range(314)]

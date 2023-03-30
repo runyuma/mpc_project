@@ -14,7 +14,7 @@ from linear_mpcc.config import Param
 from linear_mpcc.plot import visualization,mpc_visualization
 import numpy as np
 import matplotlib.pyplot as plt
-
+from linear_mpcc.obstacle import Obstacle
 
 def set_params():
     # for bycle model
@@ -35,13 +35,16 @@ def set_params():
                 "use_prev_optim_ctrl":True
                 }
     param_dict = {"dt": 0.5,
-                "N": 10,
+                "N": 8,
                 "Q": np.diag([4.0, 20.0, 1]),
                 "P": 2*np.diag([2.0, 20.0]),
                 "q": np.array([[0.02]]) ,
                 "R": np.diag([0.1, 1]),
                 "Rdu": np.diag([0.1, 1]),
                 "Rv": np.diag([0.1]),
+                "disc_offset": 0.5,
+                "radius": 2,
+                "C1":0.5,
                 "C2": 2.5,
                 "max_vel":2.0,
                 "max_acc": 2.0,
@@ -49,6 +52,7 @@ def set_params():
                 "max_delta": 0.3,
                 "use_terminal_cost": True,
                 "use_prev_optim_ctrl":True
+
                 }
 
     param = Param(param_dict)
@@ -60,17 +64,12 @@ def main():
     # quater circle path
     resolution = 0.1
     path = [[i*0.1,20*np.sin(1.57)]for i in range(300)]+[[30+20*np.cos(1.57-1.57*i/314),20*np.sin(1.57-1.57*i/314)] for i in range(314*2)]
-    # radius = [20,25]
-    # leng = int(radius[0]*1.57/resolution)
-    # path = [[radius[0]*np.cos(1.57-1.57*i/leng),radius[0]*np.sin(1.57-1.57*i/leng)] for i in range(leng)]
-    # for ind,r in enumerate(radius[1:]):
-    #     # x = radius[0] + 2*sum(radius[1:ind+1]) + r
-    #     x = path[-1][0]+r
-    #     leng = int(r*3.14/resolution)
-    #     _path = [[x-r*np.cos(3.14*i/leng),((-1)**(ind+1))*r*np.sin(3.14*i/leng)] for i in range(leng)]
-    #     path+=_path
-    #     # print(r,_path)
-    robot_state = ROBOT_STATE(0.2, 18, 0.4, 0.5, 0)
+    obstacle = [[]]
+    robot_state = ROBOT_STATE(0.2, 20, 0.0, 0.5, 0)
+    obstacles = [
+        # Obstacle(np.array([25, 22]), np.array([-0., -0.]), 2),# terminal cost good
+        Obstacle(np.array([25,22]),np.array([-0.,-0.25]),2),
+    ]
 
     # linear path
     # path = [[0, i * 0.1] for i in range(400)]  # x constantly 0, y from 0 to 10
@@ -82,7 +81,6 @@ def main():
 
     robot_x_real,robot_y_real,robot_yaw_real = [],[],[] # real robot state history - x,y,yaw
     robot_acc_real,robot_ddelta_real = [],[] # real robot control history - acc, ddelta
-
     ctrl = np.zeros((1,2)) # control array as in state space model
     prev_optim_ctrl = np.zeros((3,param.N)) # store the previous MPC's optimal control solution for next problem's state transitions
     prev_optim_theta = -contour.path_length * np.ones((1,param.N))   # at the start, assume it is the original value
@@ -92,9 +90,18 @@ def main():
     terminal_cost = []
     terminal_stage_cost = []
     STEP = 0
+    t = 0
+    figc, axsc = plt.subplots(1, 1)
+    fig_, axs_ = plt.subplots(len(obstacles), 1, figsize=(5, 12))
     while True:
         # mpcc opt
-        ctrl,pred_states,theta,v,e,log = mpcc_solver(robot_state=robot_state, contour=contour, param=param,
+        plt.sca(axs_)
+        plt.cla()
+        obs_hyperplans = [obs.get_velobstacle(robot_state, param.dt * param.N, param, visual=axs_) for obs in
+                          obstacles]
+        plt.pause(0.0001)
+
+        ctrl,pred_states,theta,v,e,log = mpcc_solver(robot_state=robot_state, contour=contour,obstacles=obs_hyperplans, param=param,
             prev_optim_ctrl=prev_optim_ctrl, prev_optim_theta=prev_optim_theta)
         prev_optim_ctrl = np.vstack([ctrl,v])
         prev_optim_theta = theta
@@ -111,18 +118,24 @@ def main():
         robot_y_real.append(robot_state.y)
         robot_yaw_real.append(robot_state.yaw)
 
+        plt.sca(axsc)
+        plt.cla()
+        visualization(robot_state, contour,axsc,obstacles)
+        mpc_visualization(pred_states,contour,theta,axsc)
         # state update (transition with nonlinear simulation)
-        robot_state.state_update(one_step_ctrl[0], one_step_ctrl[1],v[0][0], param=param)
+        plt.pause(0.0001)
 
-        visualization(robot_state, contour)
-        mpc_visualization(pred_states,contour,theta)
+        robot_state.state_update(one_step_ctrl[0], one_step_ctrl[1], v[0][0], param=param)
+        for obs in obstacles:
+            obs.update(param.dt)
+
         # print(contour.get_location(theta))
         if param.use_terminal_cost:
             cost.append(log['cost'])
             terminal_cost.append(log['terminal_cost'])
             terminal_stage_cost.append(log['terminal_stage_cost'])
         error.append(log["error"])
-        plt.pause(0.0001)
+
 
         terminal_err = np.linalg.norm([robot_state.x-goalx,robot_state.y-goaly])
 
@@ -134,6 +147,7 @@ def main():
         if STEP == 250:
             print("Haven't reach goal after 100 MPCC steps. Breaking out...")
             break
+        t = t + param.dt
 
 
     fig1, axs1 = plt.subplots(2, 1, figsize=(5, 12))
