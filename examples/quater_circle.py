@@ -68,7 +68,7 @@ def main():
     robot_state = ROBOT_STATE(0.2, 20, 0.0, 0.5, 0)
     obstacles = [
         # Obstacle(np.array([25, 22]), np.array([-0., -0.]), 2),# terminal cost good
-        Obstacle(np.array([25,22]),np.array([-0.,-0.25]),2),
+        Obstacle(np.array([25,22]),np.array([-0.5,-0.25]),2),
     ]
 
     # linear path
