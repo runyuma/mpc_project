@@ -113,11 +113,11 @@ def linear_mpc_control(robot_state,obstacles,theta0,contour,param,prev_optim_ctr
 
 
                     pass
-                    # phi_ca = np.arctan(k_tan)
-                    # dm = np.sqrt((xm-robot_state.x)**2+(ym-robot_state.y)**2)
-                    # if dm < 6.:
-                    #     cost += 0.1 * ((2*x[0,k]-xm)**2+(2*x[1,k]-ym)**2+1e-5)
-                    #     constraints += [-np.sin(phi_ca)*x[0,k] + np.cos(phi_ca)*x[1,k] <= -np.sin(phi_ca)*xm +np.cos(phi_ca)*ym]
+                    phi_ca = np.arctan(k_tan)
+                    dm = np.sqrt((xm-robot_state.x)**2+(ym-robot_state.y)**2)
+                    if dm < 6.:
+                        cost += 0.1 * ((2*x[0,k]-xm)**2+(2*x[1,k]-ym)**2+1e-5)
+                        # constraints += [-np.sin(phi_ca)*x[0,k] + np.cos(phi_ca)*x[1,k] <= -np.sin(phi_ca)*xm +np.cos(phi_ca)*ym]
                 else:
                     print('Hit')
                         # print(a)
