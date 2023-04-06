@@ -3,6 +3,7 @@ import numpy as np
 import cvxpy
 import linear_mpcc.bicycle_model as model
 import copy
+import math
 
 def linear_mpc_control(robot_state,obstacles,theta0,contour,param,prev_optim_ctrl,prev_optim_v):
     """
@@ -68,23 +69,70 @@ def linear_mpc_control(robot_state,obstacles,theta0,contour,param,prev_optim_ctr
         constraints += [x[3, k] >= 0]
         constraints += [x[4, k] <= param.delta_max]
         constraints += [x[4, k] >= -param.delta_max]
+
         constraints += [theta[:,k]<=0]
         # collision avoidance constraints
         if hasObstacles:
             dist = 0.0
             r_disc = np.sqrt((2-dist)**2+1.2**2)
             for obs in obstacles_cp:
-                phi = obs.phi
-                Robs = np.array([[np.cos(phi),-np.sin(phi)],[np.sin(phi),np.cos(phi)]])
-                diag = np.array([[1/(obs.alpha+r_disc)**2,0],[0,1/(obs.beta+r_disc)**2]]) # needs to change later
-                Mat = Robs.T@diag@Robs
+                k_tan,xm,ym = obs.get_tangential_line(robot_state_cp.x,robot_state_cp.y)
+                if k_tan!=None:
+
+
+                    # k_tan  = -1/k_tan
+                    # # print(math.sqrt((xm-robot_state_cp.x)**2 + (ym-robot_state_cp.y)**2))
+                    # if (xm-robot_state_cp.x)**2 + (ym-robot_state_cp.y)**2 >= 100 + r_disc**2:
+                    #     # tan_theta = (robot_state_cp.y-ym) / (robot_state_cp.x-xm)
+                    #     # print('center',xm,ym)
+                    #     # xm += r_disc * (1/math.sqrt(1+k_tan**2))
+                    #     # ym += r_disc * (k_tan/math.sqrt(1+k_tan**2))
+                    #     # print('on margin',xm,ym)
+                    #     a = xm * (1/math.sqrt(1+k_tan**2)) + ym * (k_tan / math.sqrt(1+k_tan**2))
+
+                    #     if obs.xo * (1/math.sqrt(1+k_tan**2)) + obs.yo * (k_tan / math.sqrt(1+k_tan**2)) <= a:
+                    #         # print(obs.xo * (1/math.sqrt(1+k_tan**2)) + obs.yo * (k_tan / math.sqrt(1+k_tan**2)))
+                    #         # print("a",a)
+                    #         a = -a
+
+                    #         print(-1/math.sqrt(1+k_tan**2),-k_tan/math.sqrt(1+k_tan**2))
+                    #         # print(-obs.xo * (1/math.sqrt(1+k_tan**2)) - obs.yo * (k_tan / math.sqrt(1+k_tan**2)) <= a)
+                    #         constraints += [-1 / math.sqrt(1+k_tan**2)*(x[0,k]+r_disc * (1/math.sqrt(1+k_tan**2))) \
+                    #             - k_tan / math.sqrt(1+k_tan**2)*(x[1,k]+r_disc * (k_tan/math.sqrt(1+k_tan**2))) <= a]
+                    #         # constraints += [-1/math.sqrt(1+k_tan**2)*(x[0,k]) \
+                    #         #     - k_tan / math.sqrt(1+k_tan**2)*(x[1,k]) <= a]
+
+                    #         # print(a)
+                    #     else:
+                    #     # print(np.array([1/math.sqrt(1+k_tan**2),k_tan / math.sqrt(1+k_tan**2)]))
+                    #         print(1/math.sqrt(1+k_tan**2),k_tan/math.sqrt(1+k_tan**2))
+                    #         constraints += [1/math.sqrt(1+k_tan**2)*(x[0,k]+r_disc * (1/math.sqrt(1+k_tan**2))) \
+                    #             + k_tan / math.sqrt(1+k_tan**2)*(x[1,k]+r_disc * (k_tan/math.sqrt(1+k_tan**2))) <= a]
+                    #         # constraints += [1/math.sqrt(1+k_tan**2)*(x[0,k]) \
+                    #         #     + k_tan / math.sqrt(1+k_tan**2)*(x[1,k]) <= a]
+
+
+                    pass
+                    # phi_ca = np.arctan(k_tan)
+                    # dm = np.sqrt((xm-robot_state.x)**2+(ym-robot_state.y)**2)
+                    # if dm < 6.:
+                    #     cost += 0.1 * ((2*x[0,k]-xm)**2+(2*x[1,k]-ym)**2+1e-5)
+                    #     constraints += [-np.sin(phi_ca)*x[0,k] + np.cos(phi_ca)*x[1,k] <= -np.sin(phi_ca)*xm +np.cos(phi_ca)*ym]
+                else:
+                    print('Hit')
+                        # print(a)
+                # phi = obs.phi
+                # Robs = np.array([[np.cos(phi),-np.sin(phi)],[np.sin(phi),np.cos(phi)]])
+                # diag = np.array([[1/(obs.alpha+r_disc)**2,0],[0,1/(obs.beta+r_disc)**2]]) # needs to change later
+                # Mat = Robs.T@diag@Robs
                 # print(Mat)
                 # constraints += [cvxpy.hstack([x[0,k],x[1,k]])@Mat@cvxpy.vstack([x[0,k],x[1,k]]) <= 1]
                 # constraints  += [cvxpy.]
+                
         # cost function
         cost += cvxpy.quad_form(x[2:3,k+1]-x[2:3,k],np.diag([10]))
         cost += cvxpy.quad_form(e[:,k],Q)
-        cost += -q.T@theta[:,k]
+        # cost += -q.T@theta[:,k]
         cost += cvxpy.quad_form(u[:,k],R)
         cost += cvxpy.quad_form(v[:,k],Rv)
 

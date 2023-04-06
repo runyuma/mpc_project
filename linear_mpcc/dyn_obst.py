@@ -1,8 +1,4 @@
-<<<<<<< Updated upstream
-
-=======
 import numpy as np
->>>>>>> Stashed changes
 
 class DynamicObstacles():
     def __init__(self, xo=0.0, yo=0.0, phi=0.0, alpha=1., beta=1., dx=0.3, dy=0.2, dphi=2.0):
@@ -19,8 +15,6 @@ class DynamicObstacles():
         self.xo += self.dx
         self.yo += self.dy
         self.phi += self.dphi
-<<<<<<< Updated upstream
-=======
 
     def get_tangential_line(self,xv,yv):
         dist = 0
@@ -32,7 +26,7 @@ class DynamicObstacles():
         res = ((x2-self.xo)*np.cos(self.phi) + (y2-self.yo)*np.sin(self.phi))**2/self.alpha**2 + \
                  ((self.xo-x2)*np.sin(self.phi) + (y2-self.yo)*np.cos(self.phi))**2/self.beta**2
         if res < 1:
-            # print("collision")
+            print("collision")
             return None,None,None
         else:
             while True:
@@ -53,4 +47,3 @@ class DynamicObstacles():
             k_tan = -self.alpha**2/self.beta**2/k1
         
             return k_tan,xm,ym
->>>>>>> Stashed changes

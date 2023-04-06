@@ -34,6 +34,12 @@ def visualization(robot_state, contour, obstacles=None):
     if obstacles!=None:
         for obstacle in obstacles:
             draw_obstacle(ax, obstacle.xo, obstacle.yo, obstacle.alpha, obstacle.beta, obstacle.phi)
+            k_tan,xm,ym = obstacle.get_tangential_line(robot_state.x,robot_state.y)
+            if k_tan==None:
+                break
+            xms = np.arange(xm-3,xm+3,1)
+            yms = (xms-xm)*k_tan + ym
+            plt.plot(xms,yms)
 
 def draw_car(x,y,yaw,steer,color='black'):
     # draw car
