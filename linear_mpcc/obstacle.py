@@ -47,6 +47,7 @@ class Obstacle():
             c2 = -np.dot(n2,self.vel)
             line1 = np.array([np.cos(lineangle1+np.pi/2),np.sin(lineangle1+np.pi/2),c1])
             line2 = np.array([np.cos(lineangle2-np.pi/2),np.sin(lineangle2-np.pi/2),c2])
+        horizon = horizon
         smallcenter1 = center1/horizon
         smallcenter2 = center2/horizon
         center1+=self.vel
@@ -70,7 +71,7 @@ class Obstacle():
         score1 = v.dot(line1[0:2])+line1[2]
         score2 = v.dot(line2[0:2])+line2[2]
         score3 = v.dot(line3[0:2])+line3[2]
-        score3 -= 5
+        score3 -= 5 #5
         print(score1,score2,score3)
         chose = np.argmax([score1,score2,score3])
         # chose = np.argmax([score1, score2,])

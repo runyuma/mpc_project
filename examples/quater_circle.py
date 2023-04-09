@@ -42,6 +42,7 @@ def set_params():
                 "R": np.diag([0.1, 1]),
                 "Rdu": np.diag([0.1, 1]),
                 "Rv": np.diag([0.1]),
+                "beta": 100,
                 "disc_offset": 0.5,
                 "radius": 2,
                 "C1":0.5,
@@ -67,7 +68,7 @@ def main():
     obstacle = [[]]
     robot_state = ROBOT_STATE(0.2, 20, 0.0, 0.5, 0)
     obstacles = [
-        # Obstacle(np.array([25, 22]), np.array([-0., -0.]), 2),# terminal cost good
+        # Obstacle(np.array([25.0, 21.5]), np.array([-0., -0.]), 1),# terminal cost good
         Obstacle(np.array([25,22]),np.array([-0.5,-0.25]),2),
     ]
 
@@ -96,7 +97,6 @@ def main():
     while True:
         # mpcc opt
         plt.sca(axs_)
-        plt.cla()
         obs_hyperplans = [obs.get_velobstacle(robot_state, param.dt * param.N, param, visual=axs_) for obs in
                           obstacles]
         plt.pause(0.0001)
@@ -119,7 +119,6 @@ def main():
         robot_yaw_real.append(robot_state.yaw)
 
         plt.sca(axsc)
-        plt.cla()
         visualization(robot_state, contour,axsc,obstacles)
         mpc_visualization(pred_states,contour,theta,axsc)
         # state update (transition with nonlinear simulation)
@@ -149,6 +148,10 @@ def main():
             break
         t = t + param.dt
 
+        plt.sca(axs_)
+        plt.cla()
+        plt.sca(axsc)
+        plt.cla()
 
     fig1, axs1 = plt.subplots(2, 1, figsize=(5, 12))
     fig2, axs2 = plt.subplots(2, 1, figsize=(5, 12))

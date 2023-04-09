@@ -97,7 +97,7 @@ def linear_mpc_control_b(robot_state,theta0,contour,param,prev_optim_ctrl,prev_o
         LQR_A,LQR_B,LQR_res = calculate_LQR_b(robot_state, theta0, contour, param, thetadot=thetadot0)
         terminal_cost = calculate_terminal_cost_b(LQR_A,LQR_B,param)
         P = terminal_cost[0]
-        cost += cvxpy.quad_form(cvxpy.hstack([e[:,T],theta[:, T]]), P)
+        cost += param.beta*cvxpy.quad_form(cvxpy.hstack([e[:,T],theta[:, T]]), P)
 
 
 
@@ -120,14 +120,14 @@ def linear_mpc_control_b(robot_state,theta0,contour,param,prev_optim_ctrl,prev_o
 
     if param.use_terminal_cost:
         x_ter = np.vstack([e[:,-1:],theta[:,-1:]])
-        log['terminal_cost'] = (x_ter.T@P@x_ter)[0][0]
+        log['terminal_cost'] = param.beta*(x_ter.T@P@x_ter)[0][0]
         K = LQR_res[0]
         u_lqr = -K@x_ter
         x_ter_plus = LQR_A@x_ter+LQR_B@u_lqr
         print(x_ter_plus)
         Q = np.diag([param.Q[0][0], param.Q[1][1], param.Q[2][2], param.q[0][0]])
         R = np.diag([param.R[0][0], param.R[1][1], param.Rv[0][0]])
-        terminal_costnext = (x_ter_plus.T@P@x_ter_plus)[0][0] + (x_ter.T@Q@x_ter+u_lqr.T@R@u_lqr )[0][0]
+        terminal_costnext = param.beta*(x_ter_plus.T@P@x_ter_plus)[0][0] + (x_ter.T@Q@x_ter+u_lqr.T@R@u_lqr )[0][0]
         log['terminal_costnext'] = terminal_costnext
         log['terminal_stage_cost'] = (x_ter.T@Q@x_ter+u_lqr.T@R@u_lqr )[0][0]
 
@@ -187,12 +187,13 @@ def linear_mpc_control_kb(robot_state, theta0, contour,obstacles, param, prev_op
         constraints += [theta[:, k + 1] == theta[:, k] + param.dt * v[:, k]]
         if k>0:
             constraints += [e[1,k]>=0]
+            constraints += [e[0, k] >= -2]
+            constraints += [e[0, k] <= 2]
         # velocity obstacle constraints
         Vov = np.array([np.cos(phi0), np.sin(phi0)])
         Vod = v0*param.C1*np.array([-np.sin(phi0), np.cos(phi0)])
         Vophi = v0*np.array([-np.sin(phi0), np.cos(phi0)])
         VophiC = -v0*np.array([-np.sin(phi0), np.cos(phi0)])*phi0
-        # constraints += [vel[:, k] == Vov * x[3, k] +Vod*x[4, k]]
         constraints+= [vel[:,k]==Vov*x[3, k]+Vod*x[4, k]+Vophi*x[2, k]+VophiC]
         if obstacles is not None:
             if k>0:
@@ -231,7 +232,7 @@ def linear_mpc_control_kb(robot_state, theta0, contour,obstacles, param, prev_op
             thetadot0 = approx_optim_ctrl[2, -1]
         LQR_A, LQR_B, LQR_res = calculate_LQR_kb(robot_state, theta0_, contour, param, thetadot=thetadot0)
         terminal_cost = calculate_terminal_cost_kb(LQR_A, LQR_B, param)
-        P = terminal_cost[0]
+        P = param.beta*terminal_cost[0]
         cost += cvxpy.quad_form(cvxpy.hstack([e[:, T], theta[:, T], x[3:, T]]), P)
 
     constraints += [e[:, T] == Ec.reshape(3, ) + (Jx @ x[:3, T]) + (Jtheta @ theta[:, T])]

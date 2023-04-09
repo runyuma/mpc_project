@@ -10,6 +10,7 @@ class Param:
         self.P = param_dict["P"]      # terminal cost
         self.q = param_dict["q"]      # as defined in cost function
         self.R = param_dict["R"]     # as defined in cost function (Ru)
+        self.beta = param_dict["beta"]    # as defined in cost function (Ru)
 
         self.Rdu = param_dict["Rdu"]    # as defined in cost function (Ru)
         self.Rv = param_dict["Rv"]    # as defined in cost function (Rv)
