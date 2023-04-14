@@ -27,6 +27,7 @@ class Param:
 
         # MPC modifications
         self.use_terminal_cost = param_dict["use_terminal_cost"]          # whether to use terminal cost in objective
+        self.use_terminal_contraint = param_dict["use_terminal_contraint"]      # whether to use terminal constraint
         self.use_prev_optim_ctrl = param_dict["use_prev_optim_ctrl"]      # whether to use previous optimal control result to approximiate next prob's state
 
         

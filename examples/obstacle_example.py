@@ -15,25 +15,12 @@ from linear_mpcc.plot import visualization,mpc_visualization
 import numpy as np
 import matplotlib.pyplot as plt
 from linear_mpcc.obstacle import Obstacle
-
+# file_path = "log/horizon/group2/dataN12.npz"
+# file_path = "log/parameter/group1/data0.002.npz"
+# file_path = "log/obs_sta/group1/data_ter.npz"
+file_path = "log/obs_dyn/group1/data_noter.npz"
 def set_params():
     # for bycle model
-    param_dict = {"dt": 0.5,
-                "N": 10,
-                "Q": np.diag([4.0, 20.0, 5]),
-                "P": 2*np.diag([2.0, 20.0]),
-                "q": np.array([[0.02]]) ,
-                "R": np.diag([0.1, 10]),
-                "Rdu": np.diag([0.1, 10]),
-                "Rv": np.diag([0.1]),
-                "C2": 2.5,
-                "max_vel":2.0,
-                "max_acc": 2.0,
-                "max_deltadot": 0.15,
-                "max_delta": 0.3,
-                "use_terminal_cost": True,
-                "use_prev_optim_ctrl":True
-                }
     param_dict = {"dt": 0.5,
                 "N": 8,
                 "Q": np.diag([4.0, 20.0, 1]),
@@ -42,7 +29,7 @@ def set_params():
                 "R": np.diag([0.1, 1]),
                 "Rdu": np.diag([0.1, 1]),
                 "Rv": np.diag([0.1]),
-                "beta": 100,
+                "beta": 1*0,
                 "disc_offset": 0.5,
                 "radius": 2,
                 "C1":0.5,
@@ -66,17 +53,12 @@ def main():
     # quater circle path
     resolution = 0.1
     path = [[i*0.1,20*np.sin(1.57)]for i in range(300)]+[[30+20*np.cos(1.57-1.57*i/314),20*np.sin(1.57-1.57*i/314)] for i in range(314*2)]
-    obstacle = [[]]
-    robot_state = ROBOT_STATE(0.2, 20, 0.0, 0.5, 0)
     obstacles = [
         # Obstacle(np.array([25.0, 21.5]), np.array([-0., -0.]), 1),# terminal cost good
-        Obstacle(np.array([25,22]),np.array([-0.5,-0.25]),2),
+        Obstacle(np.array([25, 22]), np.array([-0.5, -0.25]), 2),
     ]
-
-    # linear path
-    # path = [[0, i * 0.1] for i in range(400)]  # x constantly 0, y from 0 to 10
-    # robot_state = ROBOT_STATE(.5, 0, np.pi / 2 + 0.2, 0.1, 0)
-    
+    # robot_state = ROBOT_STATE(0.2, 20, 0.0, 0.5, 0)
+    robot_state = ROBOT_STATE(0., 20, 0.0, 0.5, 0)
     goalx,goaly = path[-1][0],path[-1][1]
     contour = Contour(path)
     param = set_params()
@@ -89,18 +71,25 @@ def main():
 
     cost =[]
     error = []
+    robot_states = []
     terminal_cost = []
     terminal_stage_cost = []
+    terminal_cost_next = []
+    obstacle_states = []
     STEP = 0
     t = 0
     figc, axsc = plt.subplots(1, 1)
-    fig_, axs_ = plt.subplots(len(obstacles), 1, figsize=(5, 12))
+    if obstacles is not None:
+        fig_, axs_ = plt.subplots(len(obstacles), 1, figsize=(5, 12))
+
     while True:
         # mpcc opt
-        plt.sca(axs_)
-        obs_hyperplans = [obs.get_velobstacle(robot_state, param.dt * param.N, param, visual=axs_) for obs in
-                          obstacles]
-        plt.pause(0.0001)
+        if obstacles is not None:
+
+            plt.sca(axs_)
+            obs_hyperplans = [obs.get_velobstacle(robot_state, param.dt * param.N, param, visual=axs_) for obs in
+                              obstacles]
+            plt.pause(0.0001)
 
         ctrl,pred_states,theta,v,e,log = mpcc_solver(robot_state=robot_state, contour=contour,obstacles=obs_hyperplans, param=param,
             prev_optim_ctrl=prev_optim_ctrl, prev_optim_theta=prev_optim_theta)
@@ -113,11 +102,11 @@ def main():
         # append ctrl history
         robot_acc_real.append(one_step_ctrl[0])
         robot_ddelta_real.append(one_step_ctrl[1])
+        obs = obstacles[0]
+        obstacle_states.append(obs.pos)
         
         # append state history
-        robot_x_real.append(robot_state.x)
-        robot_y_real.append(robot_state.y)
-        robot_yaw_real.append(robot_state.yaw)
+        robot_states.append([robot_state.x,robot_state.y,robot_state.yaw,robot_state.v,robot_state.delta])
 
         plt.sca(axsc)
         visualization(robot_state, contour,axsc,obstacles)
@@ -126,13 +115,15 @@ def main():
         plt.pause(0.0001)
 
         robot_state.state_update(one_step_ctrl[0], one_step_ctrl[1], v[0][0], param=param)
-        for obs in obstacles:
-            obs.update(param.dt)
+        if obstacles is not None:
+            for obs in obstacles:
+                obs.update(param.dt)
 
         # print(contour.get_location(theta))
         if param.use_terminal_cost:
             cost.append(log['cost'])
             terminal_cost.append(log['terminal_cost'])
+            terminal_cost_next.append(log['terminal_costnext'])
             terminal_stage_cost.append(log['terminal_stage_cost'])
         error.append(log["error"])
 
@@ -148,9 +139,9 @@ def main():
             print("Haven't reach goal after 100 MPCC steps. Breaking out...")
             break
         t = t + param.dt
-
-        plt.sca(axs_)
-        plt.cla()
+        if obstacles is not None:
+            plt.sca(axs_)
+            plt.cla()
         plt.sca(axsc)
         plt.cla()
 
@@ -180,6 +171,11 @@ def main():
     axs3[1].plot([i[1] for i in error],label='y')
     axs3[2].set_title("heading error")
     axs3[2].plot([i[2] for i in error],label='yaw')
+
+    costs = np.vstack([np.array(cost),np.array(terminal_cost),np.array(terminal_stage_cost),np.array(terminal_cost_next)])
+    inputs = np.vstack([np.array(robot_acc_real),np.array(robot_ddelta_real)])
+# record path costs error robot_states inputs
+    np.savez(file_path,path = np.array(path),costs=costs,inputs=inputs,robot_states=np.array(robot_states),error=np.array(error),obstacle_states=np.array(obstacle_states))
 
     plt.show()
     

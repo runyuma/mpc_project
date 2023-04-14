@@ -224,6 +224,10 @@ def linear_mpc_control_kb(robot_state, theta0, contour,obstacles, param, prev_op
             theta0_ = approx_optim_v[k+1]  # update theta state
             # print("theta0_",theta0_)
             Ec, Jx, Jtheta = cal_error_linear(robot_state_cp, theta0_, contour)
+        else:
+            theta0_ = theta0
+            thetadot0 = 1.
+
 
 
     # terminal cost
@@ -233,7 +237,9 @@ def linear_mpc_control_kb(robot_state, theta0, contour,obstacles, param, prev_op
         LQR_A, LQR_B, LQR_res = calculate_LQR_kb(robot_state, theta0_, contour, param, thetadot=thetadot0)
         terminal_cost = calculate_terminal_cost_kb(LQR_A, LQR_B, param)
         P = param.beta*terminal_cost[0]
-        cost += cvxpy.quad_form(cvxpy.hstack([e[:, T], theta[:, T], x[3:, T]]), P)
+        # theta_offset = min(0, theta0 + param.dt * param.N * param.v_max)
+        theta_offset = 0
+        cost += cvxpy.quad_form(cvxpy.hstack([e[:, T], theta[:, T]-theta_offset, x[3:, T]]), P)
 
     constraints += [e[:, T] == Ec.reshape(3, ) + (Jx @ x[:3, T]) + (Jtheta @ theta[:, T])]
     constraints += [x[3, T] <= param.v_max]
@@ -257,10 +263,12 @@ def linear_mpc_control_kb(robot_state, theta0, contour,obstacles, param, prev_op
         print("vel",vel)
     else:
         print("Cannot solve linear mpc!")
-    log = {'cost': cost.value, 'error': e[:, 0]}
+    log = {'cost': cost.value+theta_offset**2*P[3,3], 'error': e[:, 0]}
     if param.use_terminal_cost:
-        x_ter = np.hstack([e[:, T], theta[:, T], x[3:, T]])
-        log['terminal_cost'] = (x_ter.T@P@x_ter)
+
+        x_ter = np.hstack([e[:, T], theta[:, T]-theta_offset, x[3:, T]])
+        # print("xter", x_ter)
+        log['terminal_cost'] = (x_ter.T@P@x_ter)+theta_offset**2*P[3,3]
         K = LQR_res[0]
         u_lqr = -K@x_ter
         x_ter_plus = LQR_A@x_ter+LQR_B@u_lqr
@@ -268,8 +276,8 @@ def linear_mpc_control_kb(robot_state, theta0, contour,obstacles, param, prev_op
         Q = np.diag([param.Q[0][0], param.Q[1][1], param.Q[2][2], param.q[0][0], param.R[0][0], param.R[1][1]])
         R = np.diag([param.Rdu[0][0], param.Rdu[1][1], param.Rv[0][0]])
         terminal_costnext = (x_ter_plus.T@P@x_ter_plus) + (x_ter.T@Q@x_ter+u_lqr.T@R@u_lqr )
-        log['terminal_costnext'] = terminal_costnext
-        log['terminal_stage_cost'] = (x_ter.T@Q@x_ter+u_lqr.T@R@u_lqr )
+        log['terminal_costnext'] = terminal_costnext+theta_offset**2*P[3,3]
+        log['terminal_stage_cost'] = (x_ter.T@Q@x_ter+u_lqr.T@R@u_lqr )+theta_offset**2*param.q[0][0]
 
     return x, u, theta,v,e,log
 def cal_error_linear(robot_state,theta,contour):
