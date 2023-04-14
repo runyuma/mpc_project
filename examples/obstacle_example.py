@@ -29,7 +29,7 @@ def set_params():
                 "R": np.diag([0.1, 1]),
                 "Rdu": np.diag([0.1, 1]),
                 "Rv": np.diag([0.1]),
-                "beta": 1*0,
+                "beta": 1,
                 "disc_offset": 0.5,
                 "radius": 2,
                 "C1":0.5,
@@ -175,7 +175,7 @@ def main():
     costs = np.vstack([np.array(cost),np.array(terminal_cost),np.array(terminal_stage_cost),np.array(terminal_cost_next)])
     inputs = np.vstack([np.array(robot_acc_real),np.array(robot_ddelta_real)])
 # record path costs error robot_states inputs
-    np.savez(file_path,path = np.array(path),costs=costs,inputs=inputs,robot_states=np.array(robot_states),error=np.array(error),obstacle_states=np.array(obstacle_states))
+#     np.savez(file_path,path = np.array(path),costs=costs,inputs=inputs,robot_states=np.array(robot_states),error=np.array(error),obstacle_states=np.array(obstacle_states))
 
     plt.show()
     

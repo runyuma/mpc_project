@@ -8,15 +8,10 @@ SHOW_STATE = True
 SHOW_CONTROL = True
 SHOW_TERMINAL = True
 SHOW_LYAPUNOV = True
-SHOW_PATH = False
-SHOW_ERROR = False
-SHOW_STATE = False
-SHOW_CONTROL = False
-SHOW_TERMINAL = False
-SHOW_LYAPUNOV = True
+
 group = "group1/"
-files = [group+"data0.npz",group+"data0.1.npz",group+"data1.npz",group+"data10.npz",group+"data100.npz"]
-labels = ["beta = 0","beta = 0.1","beta = 1","beta = 10","beta = 100",]
+files = [group+"data_noter.npz",group+"data_ter.npz"]
+labels = ["without Terminal cost","with Terminal cost",]
 fig,ax0 = plt.subplots()
 data = np.load(files[1])
 x = data["path"][:, 0]
@@ -37,15 +32,19 @@ if SHOW_PATH:
     data = np.load(files[0])
     x = data["path"][:, 0]
     y = data["path"][:, 1]
-    ax1.plot(x, y, label="contour path")
+    ax1.plot(x, y, label="robot trajectory")
+
+    obs_x = data["obstacle_states"][:,0]
+    obs_y = data["obstacle_states"][:,1]
+    ax1.scatter(obs_x,obs_y,marker="x",s=100,label="obstacle")
     for ind,file in enumerate(files):
         data = np.load(file)
         x = data["robot_states"][:, 0]
         y = data["robot_states"][:, 1]
-        ax1.plot(x, y, label=labels[ind])
+        ax1.plot(x, y, label="vehicle path "+labels[ind])
     ax1.legend()
     ax1.set_aspect(1)
-    ax1.set_title("path")
+    ax1.set_title("Vehicle trajectory and reference path")
     ax1.set_xlabel("x")
     ax1.set_ylabel("y")
 if SHOW_ERROR:
@@ -61,7 +60,7 @@ if SHOW_ERROR:
 
     ax2[0].set_title("Lateral error for different beta")
     ax2[0].set_ylabel("lateral error/M")
-    ax2[0].set_ylim(-1,1)
+    ax2[0].set_ylim(-2,2)
     ax2[1].set_title("Heading error for different beta")
     ax2[1].set_ylabel("heading error/Rads")
     ax2[1].set_ylim(-1, 1)

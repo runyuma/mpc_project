@@ -10,10 +10,10 @@ SHOW_TERMINAL = True
 SHOW_LYAPUNOV = True
 
 group = "group1/"
-files = [group+"data_noter.npz",group+"data_ter.npz"]
-labels = ["without Terminal cost","with Terminal cost",]
+files = [group+"data_ter.npz"]
+labels = ["with Terminal cost",]
 fig,ax0 = plt.subplots()
-data = np.load(files[1])
+data = np.load(files[0])
 x = data["path"][:, 0]
 y = data["path"][:, 1]
 ax0.plot(x, y, label="reference path")
@@ -32,11 +32,12 @@ if SHOW_PATH:
     data = np.load(files[0])
     x = data["path"][:, 0]
     y = data["path"][:, 1]
-    ax1.plot(x, y, label="robot trajectory")
+    ax1.plot(x, y, label="reference trajectory")
 
     obs_x = data["obstacle_states"][:,0]
     obs_y = data["obstacle_states"][:,1]
-    ax1.scatter(obs_x,obs_y,marker="x",s=100,label="obstacle")
+    ax1.scatter(obs_x, obs_y, s=1,color = "g")
+    ax1.scatter(obs_x[20],obs_y[20],marker="x",s=100,color = "g",label="obstacle")
     for ind,file in enumerate(files):
         data = np.load(file)
         x = data["robot_states"][:, 0]
